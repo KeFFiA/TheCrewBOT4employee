@@ -3,9 +3,11 @@ import os
 
 from aiohttp import ClientSession
 from Database.database import db
-from Bot.Utils.logging_settings import iiko_api_logger
+from Bot.Utils.logging_settings import iiko_cloud_api_logger
+from Database.database_query import check_stop_list, stop_list_differences
 from path import bot_temp_path
 from config import IIKO_TOKEN
+from deepdiff import DeepDiff
 
 try:
     if os.path.exists(bot_temp_path):
@@ -15,7 +17,7 @@ try:
     path_token = os.path.join(bot_temp_path, 'iiko_token.json')
     open(path_token, 'a').close()
 except Exception as _ex:
-    iiko_api_logger.critical(f'Error opening json: {_ex}')
+    iiko_cloud_api_logger.critical(f'Error opening json: {_ex}')
 
 
 async def update_token():
@@ -33,10 +35,10 @@ async def update_token():
                 json.dump(data, file, ensure_ascii=False, indent=4)
             await update_organizations()
         except Exception as _ex:
-            iiko_api_logger.critical(f'Error writing token: {_ex}')
+            iiko_cloud_api_logger.critical(f'Error writing token: {_ex}')
             return False
     except Exception as _ex:
-        iiko_api_logger.critical(f'Error updating token: {_ex}')
+        iiko_cloud_api_logger.critical(f'Error updating token: {_ex}')
         return False
 
 
@@ -50,7 +52,7 @@ async def update_organizations():
                 'Authorization': token['Authorization']
             }
         except Exception as _ex:
-            iiko_api_logger.critical(f'Error reading token: {_ex}')
+            iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
             return False
         async with ClientSession() as session:
             async with session.post(url=url, headers=headers, json={}) as resp:
@@ -61,10 +63,10 @@ async def update_organizations():
                                  values=(organization['name'], organization['id']))
                     await update_couriers()
                 except Exception as _ex:
-                    iiko_api_logger.critical(f'Error updating organizations: {_ex}')
+                    iiko_cloud_api_logger.critical(f'Error updating organizations: {_ex}')
                     return False
     except Exception as _ex:
-        iiko_api_logger.critical(f'Error updating organizations: {_ex}')
+        iiko_cloud_api_logger.critical(f'Error updating organizations: {_ex}')
         return False
 
 
@@ -83,7 +85,7 @@ async def update_couriers():
                     'organizationIds': organization_ids
                 }
         except Exception as _ex:
-            iiko_api_logger.critical(f'Error reading token: {_ex}')
+            iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
             return False
         async with ClientSession() as session:
             async with session.post(url=url, headers=token, json=params) as resp:
@@ -113,10 +115,10 @@ async def update_couriers():
                                  values=(employee['emp_id'], employee['name']))
                     await update_terminals()
                 except Exception as _ex:
-                    iiko_api_logger.critical(f'Error updating employees: {_ex}', exc_info=True)
+                    iiko_cloud_api_logger.critical(f'Error updating employees: {_ex}', exc_info=True)
                     return False
     except Exception as _ex:
-        iiko_api_logger.critical(f'Error updating couriers: {_ex}')
+        iiko_cloud_api_logger.critical(f'Error updating couriers: {_ex}')
         return False
 
 
@@ -127,7 +129,7 @@ async def update_terminals():
             with open(path_token, 'r', encoding='utf-8') as file:
                 token = json.load(file)
         except Exception as _ex:
-            iiko_api_logger.critical(f'Error reading token: {_ex}')
+            iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
             return False
         org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall')
         org_ids_list = []
@@ -154,7 +156,7 @@ async def update_terminals():
                 return True
 
     except Exception as _ex:
-        iiko_api_logger.critical(f'Error updating terminals: {_ex}')
+        iiko_cloud_api_logger.critical(f'Error updating terminals: {_ex}')
         return False
 
 
@@ -181,7 +183,7 @@ async def check_shift(employee_id):
                 with open(path_token, 'r', encoding='utf-8') as file:
                     token = json.load(file)
             except Exception as _ex:
-                iiko_api_logger.critical(f'Error reading token: {_ex}')
+                iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
                 return False
 
             for k, v in term_ids_dict.items():
@@ -199,10 +201,10 @@ async def check_shift(employee_id):
                                          values=(term_id, k, employee_id))
                                 return True
         except Exception as _ex:
-            iiko_api_logger.critical(f'Error fetching data: {_ex}', exc_info=True)
+            iiko_cloud_api_logger.critical(f'Error fetching data: {_ex}', exc_info=True)
             return False
     except Exception as _ex:
-        iiko_api_logger.critical(f'Error checking shift: {_ex}')
+        iiko_cloud_api_logger.critical(f'Error checking shift: {_ex}')
         return False
 
 
@@ -219,7 +221,7 @@ async def shift_close(user_id):
         with open(path_token, 'r', encoding='utf-8') as file:
             token = json.load(file)
     except Exception as _ex:
-        iiko_api_logger.critical(f'Error reading token: {_ex}')
+        iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
         return False
     try:
         async with ClientSession() as session:
@@ -232,7 +234,7 @@ async def shift_close(user_id):
                 else:
                     return False
     except Exception as _ex:
-        iiko_api_logger.critical(f'Error closing shift for employee <{emp_id}>: {_ex}')
+        iiko_cloud_api_logger.critical(f'Error closing shift for employee <{emp_id}>: {_ex}')
         return False
 
 
@@ -257,7 +259,7 @@ async def shift_open(user_id, org_id):
         with open(path_token, 'r', encoding='utf-8') as file:
             token = json.load(file)
     except Exception as _ex:
-        iiko_api_logger.critical(f'Error reading token: {_ex}')
+        iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
         return False
     try:
         async with ClientSession() as session:
@@ -268,8 +270,94 @@ async def shift_open(user_id, org_id):
                              values=(term_id_list[0], org_id, user_id))
                     return True
                 else:
-                    iiko_api_logger.error(f'Error opening shift for employee <{emp_id}>: {await resp.json()}')
+                    iiko_cloud_api_logger.error(f'Error opening shift for employee <{emp_id}>: {await resp.json()}')
                     return False
     except Exception as _ex:
-        iiko_api_logger.critical(f'Error opening shift for employee <{emp_id}>: {_ex}')
+        iiko_cloud_api_logger.critical(f'Error opening shift for employee <{emp_id}>: {_ex}')
 
+
+async def update_stop_list():
+    url = 'https://api-ru.iiko.services/api/1/stop_lists'
+    org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall')
+    org_ids_list = []
+    for org_id in org_ids:
+        org_ids_list.append(org_id[0])
+    params = {
+        'organizationIds': org_ids_list
+    }
+    try:
+        with open(path_token, 'r', encoding='utf-8') as file:
+            token = json.load(file)
+    except Exception as _ex:
+        iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
+        return False
+
+    async with ClientSession() as session:
+        async with session.post(url=url, headers=token, json=params) as resp:
+            status = resp.status
+            if status == 200:
+                for_check_2 = await check_stop_list()
+                try:
+                    data = await resp.json()
+                    terminalGroup_stoplist = data.get('terminalGroupStopLists')
+                    db.query(query="DELETE FROM stop_list")
+                    for organization in terminalGroup_stoplist:
+                        org_id = organization.get('organizationId')
+                        items_1 = organization.get('items')
+                        for terminalGroups in items_1:
+                            terminalGroup_id = terminalGroups.get('terminalGroupId')
+                            items_2 = terminalGroups.get('items')
+                            for item in items_2:
+                                item_id = item.get('productId')
+                                date_add = item.get('dateAdd')
+                                db.query(query="""BEGIN;
+                                INSERT INTO stop_list (org_id, item_id, date_add) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;
+                                UPDATE stop_list SET name = menu.name FROM menu WHERE stop_list.item_id = menu.item_id;
+                                DELETE FROM stop_list WHERE stop_list.name IS NULL;""",
+                                         values=(org_id, item_id, date_add))
+                    for_check_1 = await check_stop_list()
+                    if for_check_1 != for_check_2:
+                        diff = await stop_list_differences(for_check_1, for_check_2)
+                        return diff
+                    else:
+                        pass
+                except Exception as _ex:
+                    iiko_cloud_api_logger.critical(f'Error updating stop list: {_ex}')
+                return status
+            else:
+                iiko_cloud_api_logger.error(f'Error updating stop list: {status}')
+                return status
+
+
+async def update_menu():
+    url = 'https://api-ru.iiko.services/api/1/nomenclature'
+    try:
+        with open(path_token, 'r', encoding='utf-8') as file:
+            token = json.load(file)
+    except Exception as _ex:
+        iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
+        return False
+    org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall')
+    try:
+        for org_id in org_ids:
+            params = {
+                'organizationId': org_id[0]
+            }
+            async with ClientSession() as session:
+                async with session.post(url=url, headers=token, json=params) as resp:
+                    status = resp.status
+                    if status == 200:
+                        data = await resp.json()
+                        print(data)
+                        products = data.get('products')
+                        # print(products)
+                        for product in products:
+                            if product.get('type') == 'Modifier':
+                                continue
+                            item_id = product.get('id')
+                            name = product.get('name')
+                            db.query(query="INSERT INTO menu (org_id, name, item_id) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+                                     values=(org_id, name, item_id))
+        return status
+    except Exception as _ex:
+        iiko_cloud_api_logger.critical(f'Error updating menu: {_ex}')

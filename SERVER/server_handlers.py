@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 
 import datetime
+from types import NoneType
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
 
 import config
+from API_SCRIPTS.Iiko_cloudAPI import update_stop_list
 from Bot import dialogs
 from Bot.Keyboards.inline_keyboards import create_menu_keyboard
 from Bot.Utils.logging_settings import server_logger
 from Database.database import db
+from Database.database_query import check_stop_list
 
 bot = Bot(token=config.BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
@@ -26,7 +29,6 @@ async def telegram_webhook(request: web.Request) -> web.Response:
 async def iiko_webhook(request: web.Request) -> web.Response:
     try:
         data = await request.json()
-        print(data)
         req_token = request.headers.get('Authorization')
         tokens = db.query(query="SELECT token_cloud_endpont FROM tokens", fetch='fetchall')
         for token in tokens:
@@ -41,10 +43,14 @@ async def iiko_webhook(request: web.Request) -> web.Response:
                 if event_info:
                     emp_id = event_info.get("id")
                     if emp_id:
-                        user_id = db.query(query="SELECT user_id FROM employee_list WHERE emp_id=%s",
-                                           values=(emp_id,),
-                                           fetch='fetchone')[0]
-                        user_name = db.query(query="SELECT user_name FROM users WHERE user_id=%s", values=(user_id,), fetch='fetchone')[0]
+                        try:
+                            user_id = db.query(query="SELECT user_id FROM employee_list WHERE emp_id=%s",
+                                               values=(emp_id,),
+                                               fetch='fetchone')[0]
+                            user_name = db.query(query="SELECT user_name FROM users WHERE user_id=%s", values=(user_id,), fetch='fetchone')[0]
+                        except TypeError:
+                            return web.Response(status=500, reason='Not registered user',
+                                                text=f'Not registered user with employee_id: {emp_id}')
                         try:
                             if event_info.get('opened'):
                                 db.query(query="UPDATE employee_list SET time_opened=%s WHERE user_id=%s",
@@ -77,6 +83,37 @@ async def iiko_webhook(request: web.Request) -> web.Response:
                         server_logger.warn('EmployeeID not found from webhook data')
                 else:
                     server_logger.error('No data received from iiko_cloud webhook')
+
+            if event_type == 'StopListUpdate':
+                try:
+                    diff_list = await update_stop_list()
+                    new_items_text = ''
+                    for k, items in diff_list.items():
+                        if len(items.get('items')) == 0:
+                            continue
+                        item = items.get('items')[0]
+                        name = item.get('name')
+                        new_items_text += f'<b>{k}</b> - {name}\n'
+
+                    already_stop_list = await check_stop_list()
+                    already_stop_text = ''
+                    for k, items in already_stop_list.items():
+                        already_stop_text += f'<b>{k}</b>\n\n'
+                        for item in items.get('items'):
+                            name = item.get('name')
+                            already_stop_text += f'<b>{name}</b>\n'
+                        already_stop_text += '\n'
+
+                    user_ids = db.query(query="SELECT user_id FROM white_list WHERE admin IS TRUE", fetch='fetchall')
+                    for user_id in user_ids:
+                        try:
+                            await bot.send_message(chat_id=user_id[0],
+                                                   text=dialogs.RU_ru['server']['stop_list_update'].format(new_items_text, already_stop_text))
+                        except Exception as _ex:
+                            server_logger.error(f"Failed to send message to {user_id}: {_ex}")
+                except Exception as _ex:
+                    server_logger.error(f"Failed to receive stop_list: {_ex}")
+
 
             return web.Response(status=200)
 

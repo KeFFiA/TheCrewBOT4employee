@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from API_SCRIPTS.IikoAPI import check_shift, update_token
+from API_SCRIPTS.Iiko_cloudAPI import check_shift, update_token
 from Bot import dialogs
 from Database.database import db
 from Database.database_query import white_list

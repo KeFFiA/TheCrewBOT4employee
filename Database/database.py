@@ -179,7 +179,22 @@ create_employee_couriers_table = """
         )
     """
 
+create_stop_list_table = """
+    CREATE TABLE IF NOT EXISTS stop_list (
+        org_id TEXT DEFAULT NULL,
+        name TEXT DEFAULT NULL,
+        item_id TEXT UNIQUE DEFAULT NULL,
+        date_add Text DEFAULT NULL
+        )
+    """
 
+create_menu_table = """
+    CREATE TABLE IF NOT EXISTS menu (
+        org_id TEXT DEFAULT NULL,
+        name TEXT DEFAULT NULL,
+        item_id TEXT UNIQUE DEFAULT NULL
+        )
+    """
 
 db.query(query=create_users_table)
 db.query(query=create_white_list_table)
@@ -187,3 +202,5 @@ db.query(query=create_tokens_table)
 db.query(query=create_employee_table)
 db.query(query=create_organizations_table)
 db.query(query=create_employee_couriers_table)
+db.query(query=create_stop_list_table)
+db.query(query=create_menu_table)

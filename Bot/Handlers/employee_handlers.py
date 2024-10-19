@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
 from API_SCRIPTS.GeoAPI import check_geo
-from API_SCRIPTS.IikoAPI import shift_close, shift_open
+from API_SCRIPTS.Iiko_cloudAPI import shift_close, shift_open
 from Bot import dialogs
 from Bot.Keyboards.inline_keyboards import create_menu_keyboard, choose_menu, choose_org_menu, settings_menu
 from Bot.Keyboards.keyboards import send_location

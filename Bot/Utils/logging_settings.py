@@ -1,14 +1,17 @@
 import logging.config
 import logging
 import os
-
-path = os.path.abspath('../Logs/log.log')
+from path import bot_logs_path
 
 try:
-    os.mkdir('../Logs/')
-    open(path, 'a').close()
-except FileExistsError:
-    pass
+    if os.path.exists(bot_logs_path):
+        pass
+    else:
+        os.mkdir(bot_logs_path)
+    path_logs = os.path.join(bot_logs_path, 'log.log')
+    open(path_logs, 'a').close()
+except Exception as _ex:
+    logging.critical(f'Error opening json: {_ex}')
 
 LOGGING_CONFIG = {
     'version': 1,
@@ -29,7 +32,7 @@ LOGGING_CONFIG = {
         'rotating_files_handler': {
             'class': 'logging.handlers.RotatingFileHandler',
             'formatter': 'default_formatter',
-            'filename': path,
+            'filename': path_logs,
             'encoding': 'UTF-8',
             'maxBytes': 1000000,
             'backupCount': 3,
@@ -74,6 +77,11 @@ LOGGING_CONFIG = {
             'propagate': True,
             'level': 'DEBUG'
         },
+        'IIKO_CLOUD_API': {
+            'handlers': ['stream_handler', 'rotating_files_handler'],
+            'propagate': True,
+            'level': 'DEBUG'
+        },
         'GEO_API': {
             'handlers': ['stream_handler', 'rotating_files_handler'],
             'propagate': True,
@@ -91,4 +99,5 @@ admin_handlers_logger = logging.getLogger('ADMIN_HANDLERS')
 employee_handlers_logger = logging.getLogger('EMPLOYEE_HANDLERS')
 server_logger = logging.getLogger('SERVER_HANDLERS')
 iiko_api_logger = logging.getLogger('IIKO_API')
+iiko_cloud_api_logger = logging.getLogger('IIKO_CLOUD_API')
 geo_api_logger = logging.getLogger('GEO_API')

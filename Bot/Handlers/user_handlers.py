@@ -5,7 +5,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
-from API_SCRIPTS.IikoAPI import update_token
+from API_SCRIPTS.Iiko_cloudAPI import update_token
 from Bot import dialogs
 from Bot.Keyboards.inline_keyboards import register_menu, create_menu_keyboard
 from Bot.Keyboards.keyboards import send_contact
