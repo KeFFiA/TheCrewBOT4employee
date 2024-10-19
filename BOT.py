@@ -10,7 +10,7 @@ from Bot.Utils.logging_settings import bot_logger
 
 from Bot.Utils.middlewares import CheckInAdminListMiddleware, CheckInEmployeeListMiddleware
 from Bot.Utils.middlewares import CheckInWhiteListMiddleware
-from SERVER.server_handlers import iiko_webhook, bot, dp
+from SERVER.server_requests import iiko_webhook, bot, dp
 
 # from Bot.Utils.scheduler import scheduler, load_jobs
 

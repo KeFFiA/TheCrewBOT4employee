@@ -41,7 +41,7 @@ async def admins_lists():
     return admins_list
 
 async def check_stop_list():
-    data = db.query(query="SELECT * FROM stop_list", fetch='fetchall')
+    data = db.query(query="SELECT * FROM stop_list ", fetch='fetchall')
     result = {}
 
     for org_id, name, item_id, date_add in data:
