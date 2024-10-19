@@ -1,0 +1,14 @@
+from aiogram.fsm.state import StatesGroup, State
+
+
+class Register(StatesGroup):
+    name = State()
+
+
+class Choose(StatesGroup):
+    choose = State()
+    choose_org = State()
+
+
+class Settings(StatesGroup):
+    name = State()
