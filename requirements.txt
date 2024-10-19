@@ -3,4 +3,3 @@ psycopg2==2.9.9
 aiohttp==3.10.5
 
 geopy==2.4.1
-deepdiff==8.0.1
