@@ -11,20 +11,30 @@ async def white_list():
 
     for ids in white:
         try:
-            user = db.query("SELECT (user_name, user_surname, username) FROM users WHERE user_id=%s",
-                            values=ids,
-                            fetch='fetchone')[0]
+            try:
+                user = db.query(query="SELECT name FROM employee_list WHERE user_id=%s",
+                                values=ids, fetch='fetchone')[0]
+            except:
+                user = db.query("SELECT (user_name, user_surname, username) FROM users WHERE user_id=%s",
+                                values=ids,
+                                fetch='fetchone')[0]
             if ids[0] in developer_id:
                 pass
             elif ids[0] in admins_list:
-                translator_user = str.maketrans('', '', '()')
-                step_1 = user.translate(translator_user)
-                step_2 = step_1.replace(',', ' ')
+                try:
+                    translator_user = str.maketrans('', '', '()')
+                    step_1 = user.translate(translator_user)
+                    step_2 = step_1.replace(',', ' ')
+                except:
+                    step_2 = user
                 step_3[f'white_{ids[0]}'] = '[ADM] ' + step_2
             else:
-                translator_user = str.maketrans('', '', '()')
-                step_1 = user.translate(translator_user)
-                step_2 = step_1.replace(',', ' ')
+                try:
+                    translator_user = str.maketrans('', '', '()')
+                    step_1 = user.translate(translator_user)
+                    step_2 = step_1.replace(',', ' ')
+                except:
+                    step_2 = user
                 step_3[f'white_{ids[0]}'] = step_2
         except:
             pass
@@ -40,8 +50,9 @@ async def admins_lists():
     admins_list = [int(d) for d in admins_list]
     return admins_list
 
+
 async def check_stop_list():
-    data = db.query(query="SELECT * FROM stop_list ", fetch='fetchall')
+    data = db.query(query="SELECT * FROM stop_list ORDER BY name", fetch='fetchall')
     result = {}
 
     for org_id, name, item_id, date_add in data:
@@ -57,16 +68,15 @@ async def check_stop_list():
         })
     return result
 
+
 async def stop_list_differences(dict_a, dict_b):
     result = {}
     for key, value in dict_a.items():
         result[key] = {'items': []}
-
         for item in value['items']:
             if key not in dict_b or not any(
                     existing_item['item_id'] == item['item_id'] for existing_item in dict_b[key]['items']):
                 result[key]['items'].append(item)
-
     return result
 
 

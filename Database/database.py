@@ -154,10 +154,10 @@ create_employee_table = """
 create_employee_server_table = """
     CREATE TABLE IF NOT EXISTS employee_server (
         id SERIAL PRIMARY KEY,
+        org_name TEXT DEFAULT NULL,
         employee_id TEXT UNIQUE DEFAULT NULL,
         name TEXT DEFAULT NULL,
-        role TEXT DEFAULT NULL,
-        password TEXT DEFAULT NULL
+        role TEXT DEFAULT NULL
         )
     """
 
@@ -196,6 +196,18 @@ create_menu_table = """
         )
     """
 
+create_iiko_login_table = """
+    CREATE TABLE IF NOT EXISTS iiko_login(
+    org_name TEXT UNIQUE DEFAULT NULL,
+    path TEXT DEFAULT NULL,
+    port TEXT DEFAULT NULL,
+    login TEXT DEFAULT NULL,
+    password TEXT DEFAULT NULL,
+    token TEXT DEFAULT NULL
+    )
+"""
+
+
 db.query(query=create_users_table)
 db.query(query=create_white_list_table)
 db.query(query=create_tokens_table)
@@ -204,3 +216,5 @@ db.query(query=create_organizations_table)
 db.query(query=create_employee_couriers_table)
 db.query(query=create_stop_list_table)
 db.query(query=create_menu_table)
+db.query(query=create_iiko_login_table)
+db.query(query=create_employee_server_table)

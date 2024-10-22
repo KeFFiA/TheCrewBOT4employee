@@ -12,3 +12,8 @@ class Choose(StatesGroup):
 
 class Settings(StatesGroup):
     name = State()
+
+
+class WhiteList(StatesGroup):
+    user = State()
+    choose = State()

@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from aiogram import Router, F, Bot
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -7,8 +5,10 @@ from aiogram.types import Message, CallbackQuery
 
 from API_SCRIPTS.GeoAPI import check_geo
 from API_SCRIPTS.Iiko_cloudAPI import shift_close, shift_open
+from API_SCRIPTS.iikoAPI import employees_attendance
 from Bot import dialogs
-from Bot.Keyboards.inline_keyboards import create_menu_keyboard, choose_menu, choose_org_menu, settings_menu
+from Bot.Keyboards.inline_keyboards import create_menu_keyboard, choose_menu, choose_org_menu, settings_menu, \
+    create_choose_time_keyboard
 from Bot.Keyboards.keyboards import send_location
 from Bot.Utils.states import Choose
 from Database.database import db
@@ -75,8 +75,7 @@ async def choose(call: CallbackQuery, bot: Bot, state: FSMContext):
     if data['choose'] == 'shift_close':
         if call.data == 'yes':
             if await shift_close(call.from_user.id):
-                await call.message.edit_text(text=dialogs.RU_ru['shift']['close_success'].format(call.from_user.first_name),
-                                             reply_markup=await create_menu_keyboard(call.from_user.id))
+                await call.message.delete()
             else:
                 await call.message.edit_text(text=dialogs.RU_ru['error'].format(call.from_user.first_name),
                                              reply_markup=await create_menu_keyboard(call.from_user.id))
@@ -100,8 +99,9 @@ async def choose(call: CallbackQuery, bot: Bot, state: FSMContext):
 @employee_router.callback_query(Choose.choose_org)
 async def choose_org(call: CallbackQuery, state: FSMContext):
     if await shift_open(call.from_user.id, call.data):
-        await call.message.edit_text(text=dialogs.RU_ru['shift']['open_success'].format(datetime.now().strftime("%m/%d/%Y - %H:%M:%S")),
-                                     reply_markup=await create_menu_keyboard(call.from_user.id))
+        # await call.message.edit_text(text=dialogs.RU_ru['shift']['open_success'].format(datetime.now().strftime("%m/%d/%Y - %H:%M:%S")),
+        #                              reply_markup=await create_menu_keyboard(call.from_user.id))
+        await call.message.delete()
     else:
         await call.message.edit_text(text=dialogs.RU_ru['error'].format(call.from_user.first_name),
                                      reply_markup=await create_menu_keyboard(call.from_user.id))
@@ -158,4 +158,23 @@ async def settings_menus(call: CallbackQuery):
         items.append(item)
     await call.message.edit_text(text=dialogs.RU_ru['settings'].format(name, phone, items[0], items[1], items[2]),
                                  reply_markup=await settings_menu())
+
+
+@employee_router.callback_query(F.data.startswith('stats'))
+async def stats_menus(call: CallbackQuery):
+    data = call.data.removeprefix('stats_')
+    name = db.query(query="SELECT name FROM employee_list WHERE user_id=%s", values=(call.from_user.id,), fetch='fetchone')[0]
+    if data == 'stats':
+        await call.message.edit_text(text=dialogs.RU_ru['stats'].format(name=name, hours=dialogs.RU_ru['choose_time']['text'],
+                                                                        table=dialogs.RU_ru['choose_time']['table']),
+                                     reply_markup=await create_choose_time_keyboard(), parse_mode='MARKDOWN')
+    else:
+        table, result = await employees_attendance(user_id=call.from_user.id, data=data)
+        try:
+            await call.message.edit_text(
+                text=dialogs.RU_ru['stats'].format(name=name, hours=result, table=table),
+                reply_markup=await create_choose_time_keyboard(), parse_mode='MARKDOWN')
+        except:
+            await call.answer()
+
 

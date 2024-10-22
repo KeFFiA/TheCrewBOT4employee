@@ -103,6 +103,10 @@ async def register_step(call: CallbackQuery, bot: Bot, state: FSMContext):
         await call.message.delete()
         await bot.send_message(chat_id=call.from_user.id, text=dialogs.RU_ru['register']['phone'], reply_markup=await send_contact())
     if call.data == 'register_save':
+        db.query("""UPDATE employee_list
+                    SET emp_id = es.employee_id
+                    FROM employee_server es
+                    WHERE employee_list.name = es.name;""")
         await call.message.edit_text(text=dialogs.RU_ru['register']['save'],
                                      reply_markup=await create_menu_keyboard(call.from_user.id))
 

@@ -7,7 +7,6 @@ from Bot.Utils.logging_settings import iiko_cloud_api_logger
 from Database.database_query import check_stop_list, stop_list_differences
 from path import bot_temp_path
 from config import IIKO_TOKEN
-from deepdiff import DeepDiff
 
 try:
     if os.path.exists(bot_temp_path):
@@ -111,8 +110,6 @@ async def update_couriers():
                     for employee in employees_list:
                         db.query(query="INSERT INTO employee_couriers (name, employee_id, org_ids) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
                                  values=(employee['name'], employee['emp_id'], employee['org_ids']))
-                        db.query(query="UPDATE employee_list SET emp_id=%s WHERE name=%s",
-                                 values=(employee['emp_id'], employee['name']))
                     await update_terminals()
                 except Exception as _ex:
                     iiko_cloud_api_logger.critical(f'Error updating employees: {_ex}', exc_info=True)
@@ -320,7 +317,7 @@ async def update_stop_list():
                         diff = await stop_list_differences(for_check_1, for_check_2)
                         return diff
                     else:
-                        pass
+                        return
                 except Exception as _ex:
                     iiko_cloud_api_logger.critical(f'Error updating stop list: {_ex}')
                 return status
@@ -348,9 +345,7 @@ async def update_menu():
                     status = resp.status
                     if status == 200:
                         data = await resp.json()
-                        print(data)
                         products = data.get('products')
-                        # print(products)
                         for product in products:
                             if product.get('type') == 'Modifier':
                                 continue

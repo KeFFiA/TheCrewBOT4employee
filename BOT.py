@@ -10,14 +10,16 @@ from Bot.Utils.logging_settings import bot_logger
 
 from Bot.Utils.middlewares import CheckInAdminListMiddleware, CheckInEmployeeListMiddleware
 from Bot.Utils.middlewares import CheckInWhiteListMiddleware
+from Bot.Utils.scheduler import load_jobs, scheduler
 from SERVER.server_requests import iiko_webhook, bot, dp
 
-# from Bot.Utils.scheduler import scheduler, load_jobs
 
 app = web.Application()
 
 
 async def on_startup():
+    load_jobs()
+    scheduler.start()
     await bot.set_webhook(f'{config.base_url}{config.path_webhook}')
     bot_logger.info("Webhook for Telegram set up complete")
     bot_logger.info("Bot started")
@@ -28,12 +30,10 @@ async def on_shutdown():
     bot_logger.info("Bot shutdown")
     await bot.delete_webhook(drop_pending_updates=True)
     await bot.session.close()
+    scheduler.shutdown()
 
 
 def main():
-    # await load_jobs()
-    # scheduler.start()
-
     dp.include_router(admin_router)
     dp.include_router(user_router)
     dp.include_router(employee_router)
@@ -58,7 +58,6 @@ def main():
     webhook_request_handler.register(app, path=f'{config.path_webhook}')
 
     app.router.add_post(path=f"{config.path_webhook_iiko}", handler=iiko_webhook)
-
     setup_application(app, dp, bot=bot)
 
     web.run_app(app, host=config.host_web, port=config.port_web)

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -8,7 +10,7 @@ from Database.database_query import white_list
 
 
 async def create_menu_keyboard(user_id):
-    stats = InlineKeyboardButton(callback_data='stats', text=dialogs.RU_ru['navigation']['stats'])
+    stats = InlineKeyboardButton(callback_data='stats_stats', text=dialogs.RU_ru['navigation']['stats'])
     settings = InlineKeyboardButton(callback_data='settings_menu', text=dialogs.RU_ru['navigation']['settings'])
 
     open = InlineKeyboardButton(callback_data='shift_open', text=dialogs.RU_ru['navigation']['open'])
@@ -35,6 +37,12 @@ async def create_menu_keyboard(user_id):
 
         builder.attach(InlineKeyboardBuilder.from_markup(keyboard_attendance))
 
+    admin = db.query(query="SELECT admin FROM white_list WHERE user_id=%s", fetch='fetchone', values=(user_id,))[0]
+
+    if admin:
+        admin_but = InlineKeyboardButton(callback_data='admin', text=dialogs.RU_ru['navigation']['admin'])
+        admin_kb = InlineKeyboardMarkup(inline_keyboard=[[admin_but]])
+        builder.attach(InlineKeyboardBuilder.from_markup(admin_kb))
     return builder.as_markup()
 
 
@@ -116,11 +124,13 @@ async def settings_menu():
 
 async def admin_menu():
     white_list_but = InlineKeyboardButton(callback_data='white_list', text=dialogs.RU_ru['navigation']['white_list'])
+    stop_list_but = InlineKeyboardButton(callback_data='stop_list', text=dialogs.RU_ru['navigation']['stop_list'])
 
     back = InlineKeyboardButton(callback_data='main_menu', text=dialogs.RU_ru['navigation']['menu'])
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [white_list_but],
+        [stop_list_but],
         [back]
     ])
 
@@ -143,8 +153,34 @@ async def create_white_list_keyboard():
     builder.row(*buttons, width=1)
     last_btn_1 = InlineKeyboardButton(callback_data='next_page', text='-->')
     last_btn_2 = InlineKeyboardButton(callback_data='last_page', text='<--')
-    last_btn_3 = InlineKeyboardButton(text=dialogs.RU_ru['navigation']['menu'], callback_data='main_menu')
+    last_btn_3 = InlineKeyboardButton(text=dialogs.RU_ru['navigation']['admin'], callback_data='admin')
     last_btns = InlineKeyboardMarkup(inline_keyboard=[[last_btn_2, last_btn_1], [last_btn_3]])
     builder.attach(InlineKeyboardBuilder.from_markup(last_btns))
     return builder.as_markup()
+
+
+async def create_choose_time_keyboard():
+    now = datetime.now()
+    current_day = now.day
+    second_half = InlineKeyboardButton(callback_data='stats_second_half', text=dialogs.RU_ru['navigation']['second_half'])
+    first_half = InlineKeyboardButton(callback_data='stats_first_half', text=dialogs.RU_ru['navigation']['first_half'])
+    this_month = InlineKeyboardButton(callback_data='stats_this_month', text=dialogs.RU_ru['navigation']['this_month'])
+    last_month = InlineKeyboardButton(callback_data='stats_last_month', text=dialogs.RU_ru['navigation']['last_month'])
+    back = InlineKeyboardButton(callback_data='main_menu', text=dialogs.RU_ru['navigation']['menu'])
+    if current_day >= 15:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [first_half],
+            [this_month],
+            [last_month],
+            [back]
+        ])
+    else:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [second_half],
+            [this_month],
+            [last_month],
+            [back]
+        ])
+    return keyboard
+
 

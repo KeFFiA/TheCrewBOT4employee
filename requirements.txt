@@ -3,3 +3,7 @@ psycopg2==2.9.9
 aiohttp==3.10.5
 
 geopy==2.4.1
+prettytable==3.11.0
+xmltodict==0.14.2
+APScheduler==3.10.4
+pandas==2.2.3

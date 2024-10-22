@@ -13,6 +13,8 @@ try:
 except Exception as _ex:
     logging.critical(f'Error opening json: {_ex}')
 
+level = 'DEBUG'
+
 LOGGING_CONFIG = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -45,48 +47,53 @@ LOGGING_CONFIG = {
         'BOT': {
             'handlers': ['stream_handler', 'rotating_files_handler'],
             'propagate': True,
-            'level': 'DEBUG'
+            'level': level
         },
         'DATABASE': {
             'handlers': ['stream_handler', 'rotating_files_handler'],
             'propagate': True,
-            'level': 'DEBUG'
+            'level': level
         },
         'USER_HANDLERS': {
             'handlers': ['stream_handler', 'rotating_files_handler'],
             'propagate': True,
-            'level': 'DEBUG'
+            'level': level
         },
         'ADMIN_HANDLERS': {
             'handlers': ['stream_handler', 'rotating_files_handler'],
             'propagate': True,
-            'level': 'DEBUG'
+            'level': level
         },
         'EMPLOYEE_HANDLERS': {
             'handlers': ['stream_handler', 'rotating_files_handler'],
             'propagate': True,
-            'level': 'DEBUG'
+            'level': level
         },
         'SERVER_HANDLERS': {
             'handlers': ['stream_handler', 'rotating_files_handler'],
             'propagate': True,
-            'level': 'DEBUG'
+            'level': level
         },
         'IIKO_API': {
             'handlers': ['stream_handler', 'rotating_files_handler'],
             'propagate': True,
-            'level': 'DEBUG'
+            'level': level
         },
         'IIKO_CLOUD_API': {
             'handlers': ['stream_handler', 'rotating_files_handler'],
             'propagate': True,
-            'level': 'DEBUG'
+            'level': level
         },
         'GEO_API': {
             'handlers': ['stream_handler', 'rotating_files_handler'],
             'propagate': True,
-            'level': 'DEBUG'
+            'level': level
         },
+        'SCHEDULER': {
+            'handlers': ['stream_handler', 'rotating_files_handler'],
+            'propagate': True,
+            'level': level
+        }
     }
 }
 
@@ -101,3 +108,4 @@ server_logger = logging.getLogger('SERVER_HANDLERS')
 iiko_api_logger = logging.getLogger('IIKO_API')
 iiko_cloud_api_logger = logging.getLogger('IIKO_CLOUD_API')
 geo_api_logger = logging.getLogger('GEO_API')
+scheduler_logger = logging.getLogger('SCHEDULER')
