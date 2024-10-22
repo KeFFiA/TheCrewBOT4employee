@@ -97,12 +97,18 @@ async def employees_attendance(user_id, data):
                     date_to_list = []
                     try:
                         for attendance in data['attendances']['attendance']:
+                            try:
+                                date_from_list.append(attendance['dateFrom'])
+                                date_to_list.append(attendance['dateTo'])
+                            except TypeError:
+                                pass
+                    except:
+                        try:
+                            attendance = data['attendances']['attendance']
                             date_from_list.append(attendance['dateFrom'])
                             date_to_list.append(attendance['dateTo'])
-                    except:
-                        attendance = data['attendances']['attendance']
-                        date_from_list.append(attendance['dateFrom'])
-                        date_to_list.append(attendance['dateTo'])
+                        except TypeError:
+                            pass
                     status, reason = await iiko_logout(org_name)
                     if status != 200:
                         iiko_api_logger.critical(
