@@ -1,10 +1,15 @@
 from datetime import datetime
 
-from API_SCRIPTS.Iiko_cloudAPI import update_token, update_menu
-from API_SCRIPTS.iikoAPI import update_employees
+from apscheduler.triggers.cron import CronTrigger
+
+from API_SCRIPTS.iiko_cloudAPI import update_token, update_menu
+from API_SCRIPTS.iikoAPI import update_employees, employees_attendance
 from Bot.Utils.logging_settings import scheduler_logger
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+from Database.database import db
+
 
 scheduler = AsyncIOScheduler()
 
@@ -33,11 +38,28 @@ async def update_employees_iiko_job():
         scheduler_logger.error(f"Error executing job update_employees_iiko: {_ex}")
 
 
+async def mailing_attendance():
+    now = datetime.now()
+    try:
+        user_ids = db.query(query="SELECT user_id FROM employee_list WHERE emp_id IS NOT NULL AND receive_shift_time IS TRUE",
+                            fetch='fetchall')
+        for user_id in user_ids:
+            if now.day == 22:
+                data = 'first_half'
+            elif now.day == 1:
+                data = 'second_half'
+            await employees_attendance(user_id=user_id[0], data=data, mailing=True)
+        scheduler_logger.info(f"Job executed: mailing_attendance at {datetime.now().strftime('%Y-%m-%d | %H:%M:%S')}")
+    except Exception as _ex:
+        scheduler_logger.error(f"Error executing job send_attendance_for_users: {_ex}")
+
+
 def load_jobs():
     try:
         scheduler.add_job(update_tokens_cloud_job, 'cron', hour='*', minute=0)
         scheduler.add_job(update_menu_cloud_job, 'cron', hour='*', minute=0)
         scheduler.add_job(update_employees_iiko_job, 'cron', hour='*', minute=0)
+        scheduler.add_job(mailing_attendance, CronTrigger(day='1,16', hour=12, minute=0))
         scheduler_logger.info('Jobs loaded correctly.')
     except Exception as _ex:
         scheduler_logger.error(f'Failed to load jobs\n{_ex}')

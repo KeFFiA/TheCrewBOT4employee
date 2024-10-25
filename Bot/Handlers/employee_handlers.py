@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
 from API_SCRIPTS.GeoAPI import check_geo
-from API_SCRIPTS.Iiko_cloudAPI import shift_close, shift_open
+from API_SCRIPTS.iiko_cloudAPI import shift_close, shift_open
 from API_SCRIPTS.iikoAPI import employees_attendance
 from Bot import dialogs
 from Bot.Keyboards.inline_keyboards import create_menu_keyboard, choose_menu, choose_org_menu, settings_menu, \
@@ -75,7 +75,10 @@ async def choose(call: CallbackQuery, bot: Bot, state: FSMContext):
     if data['choose'] == 'shift_close':
         if call.data == 'yes':
             if await shift_close(call.from_user.id):
-                await call.message.delete()
+                try:
+                    await call.message.delete()
+                except:
+                    pass
             else:
                 await call.message.edit_text(text=dialogs.RU_ru['error'].format(call.from_user.first_name),
                                              reply_markup=await create_menu_keyboard(call.from_user.id))
@@ -85,7 +88,10 @@ async def choose(call: CallbackQuery, bot: Bot, state: FSMContext):
 
     elif data['choose'] == 'shift_open':
         if call.data == 'yes':
-            await call.message.delete()
+            try:
+                await call.message.delete()
+            except:
+                pass
             await bot.send_message(chat_id=call.from_user.id,
                                    text=dialogs.RU_ru['shift']['open']['location'].format(call.from_user.first_name),
                                    reply_markup=await send_location())
@@ -99,9 +105,10 @@ async def choose(call: CallbackQuery, bot: Bot, state: FSMContext):
 @employee_router.callback_query(Choose.choose_org)
 async def choose_org(call: CallbackQuery, state: FSMContext):
     if await shift_open(call.from_user.id, call.data):
-        # await call.message.edit_text(text=dialogs.RU_ru['shift']['open_success'].format(datetime.now().strftime("%m/%d/%Y - %H:%M:%S")),
-        #                              reply_markup=await create_menu_keyboard(call.from_user.id))
-        await call.message.delete()
+        try:
+            await call.message.delete()
+        except:
+            pass
     else:
         await call.message.edit_text(text=dialogs.RU_ru['error'].format(call.from_user.first_name),
                                      reply_markup=await create_menu_keyboard(call.from_user.id))

@@ -3,8 +3,12 @@ import json
 import xmltodict
 
 from aiohttp import ClientSession
+
+from Bot import dialogs
+from Bot.Keyboards.inline_keyboards import create_menu_keyboard
 from Database.database import db
 from Bot.Utils.logging_settings import iiko_api_logger
+from SERVER.server_requests import bot
 from Scripts.scripts import attendance_sum, get_date_range
 
 
@@ -67,7 +71,7 @@ async def update_employees():
             iiko_api_logger.critical(f'Login failed. Organization name: {org_name}. Status: {status}. Reason: {reason}')
 
 
-async def employees_attendance(user_id, data):
+async def employees_attendance(user_id, data, mailing=False):
     org_name, path, port = db.query(query="""SELECT il.org_name, il.path, il.port
                                 FROM employee_list el
                                 JOIN employee_server es ON el.emp_id = es.employee_id     
@@ -114,12 +118,20 @@ async def employees_attendance(user_id, data):
                         iiko_api_logger.critical(
                             f'Logout failed. Organization name: {org_name}. Status: {status}. Reason: {reason}')
                         return 'Error'
-                    return await attendance_sum(date_from_list, date_to_list, date_to)
+                    if not mailing:
+                        return await attendance_sum(date_from_list, date_to_list, date_to)
+                    else:
+                        table, result = await attendance_sum(date_from_list, date_to_list, date_to)
+                        name = db.query(query="SELECT name FROM employee_list WHERE user_id=%s", values=(user_id,),
+                                        fetch='fetchone')[0]
+
+                        await bot.send_message(chat_id=user_id,
+                                               text=dialogs.RU_ru['mailing'].format(name=name, hours=result, table=table),
+                                               reply_markup=await create_menu_keyboard(user_id),
+                                               parse_mode='MARKDOWN')
                 else:
                     iiko_api_logger.error(f'Fetch employee attendance failed. Organization name: {org_name}. Status: {status}. Reason: {resp.reason}')
                     return 'Error'
     else:
         iiko_api_logger.critical(f'Login failed. Organization name: {org_name}. Status: {status}. Reason: {reason}')
         return 'Error'
-
-

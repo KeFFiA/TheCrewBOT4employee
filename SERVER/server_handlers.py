@@ -1,5 +1,5 @@
 
-from API_SCRIPTS.Iiko_cloudAPI import update_stop_list
+from API_SCRIPTS.iiko_cloudAPI import update_stop_list
 from Bot.Utils.logging_settings import server_logger
 from Database.database_query import check_stop_list
 

@@ -1,3 +1,9 @@
+import importlib
+import os
+
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
 from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
@@ -12,14 +18,31 @@ from Bot.Utils.middlewares import CheckInAdminListMiddleware, CheckInEmployeeLis
 from Bot.Utils.middlewares import CheckInWhiteListMiddleware
 from Bot.Utils.scheduler import load_jobs, scheduler
 from SERVER.server_requests import iiko_webhook, bot, dp
+from path import root_path
 
 
 app = web.Application()
+observer = Observer()
+
+
+class MyEventHandler(FileSystemEventHandler):
+    def on_modified(self, event):
+        if event.src_path.endswith(".py") and ".venv" not in event.src_path:
+            bot_logger.debug(f'{event.src_path} changed, reloading...')
+            module_path = os.path.relpath(event.src_path, root_path).replace(os.path.sep, '.')[:-3]
+            bot_logger.debug('Module reloads correctly')
+            try:
+                importlib.reload(importlib.import_module(module_path))
+            except ImportError as _ex:
+                bot_logger.warning(f'Module {module_path} could not be reloaded. Error: {_ex}')
 
 
 async def on_startup():
     load_jobs()
     scheduler.start()
+    event_handler = MyEventHandler()
+    observer.schedule(event_handler, path=root_path, recursive=True)
+    observer.start()
     await bot.set_webhook(f'{config.base_url}{config.path_webhook}')
     bot_logger.info("Webhook for Telegram set up complete")
     bot_logger.info("Bot started")
@@ -31,6 +54,7 @@ async def on_shutdown():
     await bot.delete_webhook(drop_pending_updates=True)
     await bot.session.close()
     scheduler.shutdown()
+    observer.stop()
 
 
 def main():
@@ -59,8 +83,8 @@ def main():
 
     app.router.add_post(path=f"{config.path_webhook_iiko}", handler=iiko_webhook)
     setup_application(app, dp, bot=bot)
-
     web.run_app(app, host=config.host_web, port=config.port_web)
+    observer.join()
 
 
 if __name__ == "__main__":
