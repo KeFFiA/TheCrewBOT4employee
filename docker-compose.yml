@@ -1,23 +1,12 @@
-version: '3.12'
+version: '3.8'
 
 services:
-#  postgres:
-#    image: postgres:16
-#    volumes:
-#      - pgdata:/var/lib/postgresql/data
-#    restart: on-failure
-#    ports:
-#      - "5432:5432"
-
-  employee_bot:
+  the_crew_employee_bot:
     build: .
-    command:
-      - sh -c "python -m BOT"
+    command: python -m BOT
     restart: always
-#    depends_on:
-#      - postgres
-
-
-#volumes:
-#  pgdata:
-
+    environment:
+      - DB_HOST=localhost
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=110412003Aa
