@@ -2,19 +2,14 @@
 
 import datetime
 
-from aiogram import Bot, Dispatcher
-from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
 
-import config
 from Bot import dialogs
 from Bot.Keyboards.inline_keyboards import create_menu_keyboard
 from Bot.Utils.logging_settings import server_logger
 from Database.database import db
 from SERVER.server_handlers import stop_list_server
 
-bot = Bot(token=config.BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
-dp = Dispatcher()
 
 async def telegram_webhook(request: web.Request) -> web.Response:
     try:

@@ -6,9 +6,9 @@ from watchdog.events import FileSystemEventHandler
 
 from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
-from aiohttp import web
 
 import config
+from API_SCRIPTS.iikoAPI import bot, dp
 from Bot.Handlers.admin_handlers import admin_router
 from Bot.Handlers.user_handlers import user_router
 from Bot.Handlers.employee_handlers import employee_router
@@ -17,11 +17,9 @@ from Bot.Utils.logging_settings import bot_logger
 from Bot.Utils.middlewares import CheckInAdminListMiddleware, CheckInEmployeeListMiddleware
 from Bot.Utils.middlewares import CheckInWhiteListMiddleware
 from Bot.Utils.scheduler import load_jobs, scheduler
-from SERVER.server_requests import iiko_webhook, bot, dp
+from SERVER.SERVER import app, start_server
 from path import root_path
 
-
-app = web.Application()
 observer = Observer()
 
 
@@ -81,9 +79,10 @@ def main():
     )
     webhook_request_handler.register(app, path=f'{config.path_webhook}')
 
-    app.router.add_post(path=f"{config.path_webhook_iiko}", handler=iiko_webhook)
+
     setup_application(app, dp, bot=bot)
-    web.run_app(app, host=config.host_web, port=config.port_web)
+
+    start_server()
     observer.join()
 
 

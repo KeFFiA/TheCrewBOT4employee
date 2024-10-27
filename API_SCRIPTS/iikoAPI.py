@@ -1,15 +1,21 @@
 import hashlib
 import json
 import xmltodict
+from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 
 from aiohttp import ClientSession
 
+import config
 from Bot import dialogs
 from Bot.Keyboards.inline_keyboards import create_menu_keyboard
 from Database.database import db
 from Bot.Utils.logging_settings import iiko_api_logger
-from SERVER.server_requests import bot
 from Scripts.scripts import attendance_sum, get_date_range
+
+
+bot = Bot(token=config.BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
+dp = Dispatcher()
 
 
 async def iiko_login(org_name):
