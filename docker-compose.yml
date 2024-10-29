@@ -2,23 +2,17 @@ version: '3.8'
 
 services:
   bot:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    depends_on:
-      - db
-
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: keffia/thecrew:1.3
+    ports:
+      - '443:8080'
     restart: unless-stopped
     depends_on:
       - db
 
   db:
     image: postgres:latest
+    ports:
+      - '5432:5432'
     restart: always
     environment:
       POSTGRES_USER: postgres
@@ -27,5 +21,19 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  samba:
+    image: keffia/samba_the_crew:1.1
+    ports:
+      - "445:445"
+    networks:
+      - sambanet
+    volumes:
+      - obmen:/obmen
+
 volumes:
   pgdata:
+  obmen:
+
+networks:
+  sambanet:
+    driver: bridge

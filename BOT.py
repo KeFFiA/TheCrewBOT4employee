@@ -79,7 +79,6 @@ def main():
     )
     webhook_request_handler.register(app, path=f'{config.path_webhook}')
 
-
     setup_application(app, dp, bot=bot)
 
     start_server()

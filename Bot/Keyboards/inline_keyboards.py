@@ -25,9 +25,11 @@ async def create_menu_keyboard(user_id):
 
     builder.attach(InlineKeyboardBuilder.from_markup(keyboard_main))
 
-    empl_id = db.query(query="SELECT emp_id FROM employee_list WHERE user_id=%s", values=(user_id,), fetch='fetchone')[0]
+    empl_id = db.query(query="SELECT emp_id FROM employee_list WHERE user_id=%s", values=(user_id,), fetch='fetchone',
+                       log_level=30, debug=True)[0]
 
-    if db.query(query="SELECT employee_id FROM employee_couriers WHERE employee_id=%s", values=(empl_id,)):
+    if db.query(query="SELECT employee_id FROM employee_couriers WHERE employee_id=%s", values=(empl_id,), fetch='fetchone',
+                log_level=30, debug=True)[0] == empl_id:
         await update_token()
 
         if await check_shift(empl_id):
@@ -37,7 +39,8 @@ async def create_menu_keyboard(user_id):
 
         builder.attach(InlineKeyboardBuilder.from_markup(keyboard_attendance))
 
-    admin = db.query(query="SELECT admin FROM white_list WHERE user_id=%s", fetch='fetchone', values=(user_id,))[0]
+    admin = db.query(query="SELECT admin FROM white_list WHERE user_id=%s", fetch='fetchone', values=(user_id,),
+                     log_level=30, debug=True)[0]
 
     if admin:
         admin_but = InlineKeyboardButton(callback_data='admin', text=dialogs.RU_ru['navigation']['admin'])
@@ -75,8 +78,10 @@ async def choose_menu():
 async def choose_org_menu(user_id):
     builder = InlineKeyboardBuilder()
 
-    emp_id = db.query(query="SELECT emp_id FROM employee_list WHERE user_id=%s", fetch='fetchone', values=(user_id,))[0]
-    org_ids = db.query(query="SELECT org_ids FROM employee_couriers WHERE employee_id=%s", values=(emp_id,), fetch='fetchone')[0]
+    emp_id = db.query(query="SELECT emp_id FROM employee_list WHERE user_id=%s", fetch='fetchone', values=(user_id,),
+                      log_level=30, debug=True)[0]
+    org_ids = db.query(query="SELECT org_ids FROM employee_couriers WHERE employee_id=%s", values=(emp_id,), fetch='fetchone',
+                       log_level=30, debug=True)[0]
     try:
         org_ids_list = org_ids.replace('{', '').replace('}', '').split(',')
     except:
@@ -85,7 +90,7 @@ async def choose_org_menu(user_id):
     buttons = []
     for org_id in org_ids_list:
         org_name = db.query(query="SELECT name FROM organizations WHERE org_id=%s",
-                                     values=(org_id,), fetch='fetchone')[0]
+                                     values=(org_id,), fetch='fetchone', log_level=30, debug=True)[0]
 
         try:
             buttons.append(InlineKeyboardButton(

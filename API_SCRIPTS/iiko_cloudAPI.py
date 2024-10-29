@@ -59,7 +59,7 @@ async def update_organizations():
                 try:
                     for organization in data.get('organizations', []):
                         db.query(query="INSERT INTO organizations (name, org_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
-                                 values=(organization['name'], organization['id']))
+                                 values=(organization['name'], organization['id']), log_level=30, debug=True)
                     await update_couriers()
                 except Exception as _ex:
                     iiko_cloud_api_logger.critical(f'Error updating organizations: {_ex}')
@@ -75,7 +75,7 @@ async def update_couriers():
         try:
             with open(path_token, 'r', encoding='utf-8') as file:
                 token = json.load(file)
-                org_ids = list(db.query(query="SELECT org_id FROM organizations", fetch='fetchall'))
+                org_ids = list(db.query(query="SELECT org_id FROM organizations", fetch='fetchall', log_level=30, debug=True))
                 organization_ids = []
                 for org_id in org_ids:
                     org_id = org_id[0]
@@ -109,7 +109,7 @@ async def update_couriers():
                 try:
                     for employee in employees_list:
                         db.query(query="INSERT INTO employee_couriers (name, employee_id, org_ids) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
-                                 values=(employee['name'], employee['emp_id'], employee['org_ids']))
+                                 values=(employee['name'], employee['emp_id'], employee['org_ids']), log_level=30, debug=True)
                     await update_terminals()
                 except Exception as _ex:
                     iiko_cloud_api_logger.critical(f'Error updating employees: {_ex}', exc_info=True)
@@ -128,7 +128,7 @@ async def update_terminals():
         except Exception as _ex:
             iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
             return False
-        org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall')
+        org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall', log_level=30, debug=True)
         org_ids_list = []
         for org_id in org_ids:
             org_ids_list.append(org_id[0])
@@ -162,14 +162,14 @@ async def check_shift(employee_id):
     try:
         try:
             org_ids = db.query(query="SELECT org_ids FROM employee_couriers WHERE employee_id=%s", fetch='fetchall',
-                               values=(employee_id,))[0][0]
+                               values=(employee_id,), log_level=30, debug=True)[0][0]
 
             org_ids_list = org_ids.replace('{', '').replace('}', '').split(',')
 
             term_ids_dict = {}
             for org_id in org_ids_list:
                 term_id = db.query(query="SELECT terminal_groups FROM organizations WHERE org_id=%s", fetch='fetchall',
-                                    values=(org_id,))[0][0]
+                                    values=(org_id,), log_level=30, debug=True)[0][0]
                 try:
                     term_id = term_id.replace('{', '').replace('}', '').split(',')
                 except:
@@ -208,7 +208,7 @@ async def check_shift(employee_id):
 async def shift_close(user_id):
     url = 'https://api-ru.iiko.services/api/1/employees/shift/clockout'
     emp_id, term_id, org_id = db.query(query="SELECT emp_id, term_open, org_open FROM employee_list WHERE user_id=%s",
-                                       fetch='fetchone', values=(user_id,))
+                                       fetch='fetchone', values=(user_id,), log_level=30, debug=True)
     params = {
         'organizationId': org_id,
         'terminalGroupId': term_id,
@@ -236,9 +236,10 @@ async def shift_close(user_id):
 
 
 async def shift_open(user_id, org_id):
-    emp_id = db.query(query="SELECT emp_id FROM employee_list WHERE user_id=%s", values=(user_id,), fetch='fetchone')[0]
+    emp_id = db.query(query="SELECT emp_id FROM employee_list WHERE user_id=%s", values=(user_id,), fetch='fetchone',
+                      log_level=30, debug=True)[0]
     term_id = db.query(query="SELECT terminal_groups FROM organizations WHERE org_id=%s", values=(org_id,),
-                       fetch='fetchone')[0]
+                       fetch='fetchone', log_level=30, debug=True)[0]
 
     try:
         term_id_list = term_id.replace('{', '').replace('}', '').split(',')
@@ -275,7 +276,7 @@ async def shift_open(user_id, org_id):
 
 async def update_stop_list():
     url = 'https://api-ru.iiko.services/api/1/stop_lists'
-    org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall')
+    org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall', log_level=30, debug=True)
     org_ids_list = []
     for org_id in org_ids:
         org_ids_list.append(org_id[0])
@@ -311,7 +312,7 @@ async def update_stop_list():
                                 INSERT INTO stop_list (org_id, item_id, date_add) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;
                                 UPDATE stop_list SET name = menu.name FROM menu WHERE stop_list.item_id = menu.item_id;
                                 DELETE FROM stop_list WHERE stop_list.name IS NULL;""",
-                                         values=(org_id, item_id, date_add))
+                                         values=(org_id, item_id, date_add), log_level=30, debug=True)
                     for_check_1 = await check_stop_list()
                     if for_check_1 != for_check_2:
                         diff = await stop_list_differences(for_check_1, for_check_2)
@@ -334,7 +335,7 @@ async def update_menu():
     except Exception as _ex:
         iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
         return False
-    org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall')
+    org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall', log_level=30, debug=True)
     try:
         for org_id in org_ids:
             params = {
@@ -352,7 +353,7 @@ async def update_menu():
                             item_id = product.get('id')
                             name = product.get('name')
                             db.query(query="INSERT INTO menu (org_id, name, item_id) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
-                                     values=(org_id, name, item_id))
+                                     values=(org_id, name, item_id), log_level=30, debug=True)
         return status
     except Exception as _ex:
         iiko_cloud_api_logger.critical(f'Error updating menu: {_ex}')

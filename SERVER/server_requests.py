@@ -1,17 +1,24 @@
 # -*- coding: utf-8 -*-
 
 import datetime
+import os
 
 from aiohttp import web
 
+from API_SCRIPTS.iikoAPI import dp, bot
 from Bot import dialogs
 from Bot.Keyboards.inline_keyboards import create_menu_keyboard
 from Bot.Utils.logging_settings import server_logger
 from Database.database import db
 from SERVER.server_handlers import stop_list_server
+from path import VALIDATION_DIR
 
 
-async def telegram_webhook(request: web.Request) -> web.Response:
+async def index(request) -> web.Response:
+    return web.Response(text="The server is temporarily under maintenance", status=200)
+
+
+async def telegram_webhook(request) -> web.Response:
     try:
         data = await request.json()
         await dp.feed_raw_update(bot=bot, update=data)
@@ -21,7 +28,7 @@ async def telegram_webhook(request: web.Request) -> web.Response:
         return web.Response(status=500, reason='Telegram webhook error', text=f'Telegram webhook error: {_ex}')
 
 
-async def iiko_webhook(request: web.Request) -> web.Response:
+async def iiko_webhook(request) -> web.Response:
     try:
         data = await request.json()
         req_token = request.headers.get('Authorization')
@@ -40,8 +47,11 @@ async def iiko_webhook(request: web.Request) -> web.Response:
                     try:
                         user_id = db.query(query="SELECT user_id FROM employee_list WHERE emp_id=%s",
                                            values=(emp_id,),
-                                           fetch='fetchone')[0]
-                        user_name = db.query(query="SELECT user_name FROM users WHERE user_id=%s", values=(user_id,), fetch='fetchone')[0]
+                                           fetch='fetchone',
+                                           log_level=30,
+                                           debug=True)[0]
+                        user_name = db.query(query="SELECT user_name FROM users WHERE user_id=%s", values=(user_id,), fetch='fetchone',
+                                             log_level=30, debug=True)[0]
                     except TypeError:
                         return web.Response(status=406, reason='Not registered user',
                                             text=f'Not registered user with employee_id: {emp_id}')
@@ -50,7 +60,7 @@ async def iiko_webhook(request: web.Request) -> web.Response:
                             db.query(query="UPDATE employee_list SET time_opened=%s WHERE user_id=%s",
                                      values=(datetime.datetime.now().strftime("%m/%d/%Y %H:%M:%S"), user_id))
                             if db.query(query="SELECT receive_upd_shift FROM employee_list WHERE user_id=%s",
-                                        values=(user_id,), fetch='fetchone')[0]:
+                                        values=(user_id,), fetch='fetchone', log_level=30, debug=True)[0]:
                                 await bot.send_message(chat_id=user_id,
                                                        text=dialogs.RU_ru['server']['shift_open'].format(user_name,
                                                                                                          datetime.datetime.now().strftime("%H:%M")),
@@ -69,7 +79,7 @@ async def iiko_webhook(request: web.Request) -> web.Response:
                             except:
                                 delta = dialogs.RU_ru['unknown']
                             if db.query(query="SELECT receive_upd_shift FROM employee_list WHERE user_id=%s",
-                                        values=(user_id,), fetch='fetchone')[0]:
+                                        values=(user_id,), fetch='fetchone', log_level=30, debug=True)[0]:
                                 db.query(query="UPDATE employee_list SET time_opened='' WHERE user_id=%s",
                                          values=(user_id,))
                                 await bot.send_message(chat_id=user_id,
@@ -79,6 +89,7 @@ async def iiko_webhook(request: web.Request) -> web.Response:
                                                        reply_markup=await create_menu_keyboard(user_id))
                             else:
                                 pass
+                        server_logger.info(f'Message sent to {user_id}')
                     except Exception as _ex:
                         server_logger.error(f"Failed to send message to {user_id}: {_ex}")
                         return web.Response(status=500, reason='Failed to send message to user',
@@ -93,11 +104,13 @@ async def iiko_webhook(request: web.Request) -> web.Response:
                     new_items_text, already_stop_text = await stop_list_server()
                     if new_items_text and already_stop_text == 'Break':
                         return web.Response(status=204, reason='No changes', text='No changes from stop-list update')
-                    user_ids = db.query(query="SELECT user_id FROM white_list WHERE admin IS TRUE", fetch='fetchall')
+                    user_ids = db.query(query="SELECT user_id FROM white_list WHERE admin IS TRUE", fetch='fetchall',
+                                        log_level=30, debug=True)
                     for user_id in user_ids:
                         try:
                             await bot.send_message(chat_id=user_id[0],
                                                    text=dialogs.RU_ru['server']['stop_list_update'].format(new_items_text, already_stop_text))
+                            server_logger.info(f'Message sent to {user_id}')
                         except Exception as _ex:
                             server_logger.error(f"Failed to send message to {user_id}: {_ex}")
                             return web.Response(status=500, reason='Failed to send message to user',
@@ -114,3 +127,15 @@ async def iiko_webhook(request: web.Request) -> web.Response:
         server_logger.exception(f'Webhook handler error: {_ex}')
         return web.Response(status=500, reason='Iiko_cloud webhook handler error',
                             text=f'Iiko_cloud webhook handler error: {_ex}')
+
+
+async def handle_validation(request) -> web.Response:
+    token = request.match_info.get('token', None)
+    file_path = os.path.join(VALIDATION_DIR, token)
+    if os.path.exists(file_path):
+        with open(file_path, 'rb') as f:
+            content = f.read()
+        return web.Response(body=content, content_type='text/plain')
+    else:
+        server_logger.error(f'{file_path} not found')
+        return web.Response(status=404, text='File not found')

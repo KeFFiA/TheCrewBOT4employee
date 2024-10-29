@@ -93,6 +93,11 @@ LOGGING_CONFIG = {
             'handlers': ['stream_handler', 'rotating_files_handler'],
             'propagate': True,
             'level': level
+        },
+        'SERVER': {
+            'handlers': ['stream_handler', 'rotating_files_handler'],
+            'propagate': True,
+            'level': level
         }
     }
 }
@@ -109,3 +114,4 @@ iiko_api_logger = logging.getLogger('IIKO_API')
 iiko_cloud_api_logger = logging.getLogger('IIKO_CLOUD_API')
 geo_api_logger = logging.getLogger('GEO_API')
 scheduler_logger = logging.getLogger('SCHEDULER')
+servers_logger = logging.getLogger('SERVER')
