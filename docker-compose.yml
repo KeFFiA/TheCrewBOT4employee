@@ -20,6 +20,8 @@ services:
       POSTGRES_DB: TheCrewEmployee
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - database
 
   samba:
     image: keffia/samba_the_crew:1.1
@@ -37,3 +39,4 @@ volumes:
 networks:
   sambanet:
     driver: bridge
+  database:

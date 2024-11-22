@@ -1,22 +1,21 @@
 import importlib
 import os
 
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-
 from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
 import config
 from API_SCRIPTS.iikoAPI import bot, dp
 from Bot.Handlers.admin_handlers import admin_router
-from Bot.Handlers.user_handlers import user_router
 from Bot.Handlers.employee_handlers import employee_router
+from Bot.Handlers.user_handlers import user_router
 from Bot.Utils.logging_settings import bot_logger
-
 from Bot.Utils.middlewares import CheckInAdminListMiddleware, CheckInEmployeeListMiddleware
-from Bot.Utils.middlewares import CheckInWhiteListMiddleware
+# from Bot.Utils.middlewares import CheckInWhiteListMiddleware
 from Bot.Utils.scheduler import load_jobs, scheduler
+from Bot.dialogs import commands
 from SERVER.SERVER import app, start_server
 from path import root_path
 
@@ -42,6 +41,7 @@ async def on_startup():
     observer.schedule(event_handler, path=root_path, recursive=True)
     observer.start()
     await bot.set_webhook(f'{config.base_url}{config.path_webhook}')
+    await bot.set_my_commands(commands=commands)
     bot_logger.info("Webhook for Telegram set up complete")
     bot_logger.info("Bot started")
 
@@ -60,8 +60,8 @@ def main():
     dp.include_router(user_router)
     dp.include_router(employee_router)
 
-    dp.update.outer_middleware(CheckInWhiteListMiddleware())
-    dp.message.outer_middleware(CheckInWhiteListMiddleware())
+    # dp.update.outer_middleware(CheckIsRegisteredMiddleware())
+    # dp.message.outer_middleware(CheckIsRegisteredMiddleware())
     dp.message.middleware(ChatActionMiddleware())
 
     admin_router.message.middleware(CheckInAdminListMiddleware())

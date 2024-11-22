@@ -6,7 +6,6 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="samba_the_crew" />
   </component>
   <component name="PackageRequirementsSettings">
     <option name="versionSpecifier" value="Strong equality (==x.y.z)" />

@@ -2,8 +2,9 @@ from typing import Any
 
 import psycopg2
 
-from config import host, user, password, db_name, port
+import config
 from Bot.Utils.logging_settings import database_logger
+from config import host, user, password, db_name, port
 
 
 class Database:
@@ -29,10 +30,11 @@ class Database:
         self.cursor.close()
         self.connect.close()
 
-    msg = f'The sql query failed with an error' # Default error query message, when DEBUG -> False
+    msg = f'The sql query failed with an error'  # Default error query message, when DEBUG -> False
 
-    def query(self, query: str, values: tuple = None, execute_many = False, fetch: str = None, size: int = None, log_level: int = 40,
-              msg: str = msg, debug: bool = False) -> Any:
+    def query(self, query: str, values: tuple = None, execute_many=False, fetch: str = None, size: int = None,
+              log_level: int = 40,
+              msg: str = msg, debug: bool = config.debug) -> Any:
         """
         :param query: takes sql query, for example: "SELECT * FROM table"
         :param values: takes tuple of values
@@ -207,8 +209,88 @@ create_iiko_login_table = """
     )
 """
 
+create_loyalty_program_table = """
+    CREATE TABLE IF NOT EXISTS loyalty_program (
+        org_id TEXT DEFAULT NULL,
+        id TEXT UNIQUE DEFAULT NULL,
+        name TEXT DEFAULT NULL,
+        description TEXT DEFAULT NULL,
+        serviceFrom TEXT DEFAULT NULL,
+        serviceTo TEXT DEFAULT NULL,
+        notifyAboutBalanceChanges BOOLEAN DEFAULT NULL,
+        programType INT DEFAULT NULL,
+        isActive BOOLEAN DEFAULT NULL,
+        walletId TEXT DEFAULT NULL,
+        marketingCampaignsIds TEXT DEFAULT NULL,
+        appliedOrganizations TEXT DEFAULT NULL,
+        templateType INT DEFAULT NULL,
+        hasWelcomeBonus BOOLEAN DEFAULT NULL,
+        welcomeBonusSum NUMERIC DEFAULT NULL,
+        isExchangeRateEnabled BOOLEAN DEFAULT NULL,
+        refillType INT DEFAULT NULL
+    )
+"""
+
+create_loyalty_marketing_campaigns_table = """
+    CREATE TABLE IF NOT EXISTS loyalty_marketing_campaigns (
+        org_id TEXT DEFAULT NULL,
+        programId TEXT DEFAULT NULL,
+        id TEXT UNIQUE DEFAULT NULL,
+        name TEXT DEFAULT NULL,
+        description TEXT DEFAULT NULL,
+        isActive BOOLEAN DEFAULT NULL,
+        periodFrom TEXT DEFAULT NULL,
+        periodTo TEXT DEFAULT NULL,
+        orderActionConditionBindings TEXT DEFAULT NULL,
+        periodicActionConditionBindings TEXT DEFAULT NULL,
+        overdraftActionConditionBindings TEXT DEFAULT NULL,
+        guestRegistrationActionConditionBindings TEXT DEFAULT NULL
+    )
+"""
+
+create_customer_categories_table = """
+    CREATE TABLE IF NOT EXISTS customer_categories (
+        org_id TEXT DEFAULT NULL,
+        id TEXT UNIQUE DEFAULT NULL,
+        name TEXT DEFAULT NULL,
+        isActive BOOLEAN DEFAULT NULL,
+        isDefaultForNewGuests BOOLEAN DEFAULT NULL
+    )
+"""
+
+create_customers_table = """
+    CREATE TABLE IF NOT EXISTS customers (
+        user_id NUMERIC(50) UNIQUE NOT NULL,
+        guest_id TEXT DEFAULT NULL,
+        card_track TEXT DEFAULT NULL,
+        card_number TEXT DEFAULT NULL,
+        name TEXT DEFAULT NULL,
+        middlename TEXT DEFAULT NULL,
+        surname TEXT DEFAULT NULL,
+        birthday TEXT DEFAULT NULL,
+        sex TEXT DEFAULT NULL,
+        phone TEXT DEFAULT NULL,
+        email TEXT DEFAULT NULL,
+        referrer_id TEXT DEFAULT NULL,
+        receive_promo TEXT DEFAULT TRUE,
+        consent_status TEXT DEFAULT 0,
+        comment TEXT DEFAULT NULL,
+        category TEXT DEFAULT NULL
+    )
+"""
+
+# update_users_table = """
+#     ALTER TABLE users
+#     ADD COLUMN is_registered BOOLEAN DEFAULT FALSE,
+#     ADD COLUMN is_active BOOLEAN DEFAULT TRUE,
+#     ADD COLUMN is_employee BOOLEAN DEFAULT FALSE,
+#     ADD COLUMN is_admin BOOLEAN DEFAULT FALSE,
+#     ADD COLUMN is_superadmin BOOLEAN DEFAULT FALSE;
+#     """
+
 
 db.query(query=create_users_table)
+# db.query(query=update_users_table)
 db.query(query=create_white_list_table)
 db.query(query=create_tokens_table)
 db.query(query=create_employee_table)
@@ -218,3 +300,7 @@ db.query(query=create_stop_list_table)
 db.query(query=create_menu_table)
 db.query(query=create_iiko_login_table)
 db.query(query=create_employee_server_table)
+db.query(query=create_loyalty_program_table)
+db.query(query=create_loyalty_marketing_campaigns_table)
+db.query(query=create_customer_categories_table)
+db.query(query=create_customers_table)

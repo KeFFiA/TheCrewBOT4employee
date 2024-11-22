@@ -19,7 +19,7 @@ class CheckInAdminListMiddleware(BaseMiddleware):
     ) -> Any:
 
         user_id = data["event_from_user"].id
-        users = db.query(query="SELECT user_id FROM white_list WHERE admin=true", fetch='fetchall')
+        users = db.query(query="SELECT user_id FROM users WHERE is_admin=true", fetch='fetchall')
         self.admin_users = [item for tup in users for item in tup]
         if user_id in self.admin_users:
             return await handler(event, data)
@@ -33,38 +33,6 @@ class CheckInAdminListMiddleware(BaseMiddleware):
                 return await event.answer(
                     dialogs.RU_ru['not_admin'].format(user_id),
                     parse_mode='HTML', show_alert=False
-                )
-
-
-class CheckInWhiteListMiddleware(BaseMiddleware):
-    def __init__(self):
-        super().__init__()
-        self.white_users = []
-
-    async def __call__(
-            self,
-            handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
-            event: TelegramObject,
-            data: Dict[str, Any]
-    ) -> Any:
-
-        user_id = data["event_from_user"].id
-        users = db.query(query="SELECT user_id FROM white_list", fetch='fetchall')
-        self.white_users = [item for tup in users for item in tup]
-        if user_id in self.white_users:
-            return await handler(event, data)
-        else:
-            try:
-                return await event.message.answer(
-                    dialogs.RU_ru['/start_unsuccessful'] +
-                    f'\n\n<i>Ваш ID: <code>{user_id}</code></i>',
-                    parse_mode='HTML'
-                )
-            except:
-                return await event.answer(
-                    dialogs.RU_ru['/start_unsuccessful'] +
-                    f'\n\n<i>Ваш ID: <code>{user_id}</code></i>',
-                    parse_mode='HTML'
                 )
 
 
@@ -94,5 +62,32 @@ class CheckInEmployeeListMiddleware(BaseMiddleware):
             except:
                 return await event.answer(
                     dialogs.RU_ru['not_employee'],
+                    parse_mode='HTML'
+                )
+
+
+class CheckIsRegisteredMiddleware(BaseMiddleware):
+    def __init__(self):
+        super().__init__()
+    async def __call__(
+            self,
+            handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+            event: TelegramObject,
+            data: Dict[str, Any]
+    ) -> Any:
+
+        user_id = data["event_from_user"].id
+        user_check = db.query(query="SELECT is_registered FROM users WHERE user_id=%s", values=(user_id,), fetch='fetchone')
+        if user_check:
+            return await handler(event, data)
+        else:
+            try:
+                return await event.message.answer(
+                    dialogs.RU_ru['not_registered'],
+                    parse_mode='HTML'
+                )
+            except:
+                return await event.answer(
+                    dialogs.RU_ru['not_registered'],
                     parse_mode='HTML'
                 )

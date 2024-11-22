@@ -1,12 +1,15 @@
 import json
 import os
+from datetime import datetime
 
 from aiohttp import ClientSession
-from Database.database import db
+
 from Bot.Utils.logging_settings import iiko_cloud_api_logger
+from Database.database import db
 from Database.database_query import check_stop_list, stop_list_differences
-from path import bot_temp_path
+from Scripts.scripts import generate_card
 from config import IIKO_TOKEN
+from path import bot_temp_path
 
 try:
     if os.path.exists(bot_temp_path):
@@ -22,7 +25,6 @@ except Exception as _ex:
 async def update_token():
     url = 'https://api-ru.iiko.services/api/1/access_token'
     try:
-
         async with ClientSession() as session:
             async with session.post(url=url, json=IIKO_TOKEN) as resp:
                 text = await resp.json()
@@ -58,8 +60,9 @@ async def update_organizations():
                 data = await resp.json()
                 try:
                     for organization in data.get('organizations', []):
-                        db.query(query="INSERT INTO organizations (name, org_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
-                                 values=(organization['name'], organization['id']), log_level=30, debug=True)
+                        db.query(
+                            query="INSERT INTO organizations (name, org_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                            values=(organization['name'], organization['id']), log_level=30, debug=True)
                     await update_couriers()
                 except Exception as _ex:
                     iiko_cloud_api_logger.critical(f'Error updating organizations: {_ex}')
@@ -75,7 +78,8 @@ async def update_couriers():
         try:
             with open(path_token, 'r', encoding='utf-8') as file:
                 token = json.load(file)
-                org_ids = list(db.query(query="SELECT org_id FROM organizations", fetch='fetchall', log_level=30, debug=True))
+                org_ids = list(
+                    db.query(query="SELECT org_id FROM organizations", fetch='fetchall', log_level=30, debug=True))
                 organization_ids = []
                 for org_id in org_ids:
                     org_id = org_id[0]
@@ -108,8 +112,10 @@ async def update_couriers():
                 employees_list = list(user_dict.values())
                 try:
                     for employee in employees_list:
-                        db.query(query="INSERT INTO employee_couriers (name, employee_id, org_ids) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
-                                 values=(employee['name'], employee['emp_id'], employee['org_ids']), log_level=30, debug=True)
+                        db.query(
+                            query="INSERT INTO employee_couriers (name, employee_id, org_ids) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+                            values=(employee['name'], employee['emp_id'], employee['org_ids']), log_level=30,
+                            debug=True)
                     await update_terminals()
                 except Exception as _ex:
                     iiko_cloud_api_logger.critical(f'Error updating employees: {_ex}', exc_info=True)
@@ -150,10 +156,284 @@ async def update_terminals():
 
                 for k, v in terminals_dict.items():
                     db.query(query="UPDATE organizations SET terminal_groups=%s WHERE org_id=%s", values=(v, k))
-                return True
+        return True
 
     except Exception as _ex:
         iiko_cloud_api_logger.critical(f'Error updating terminals: {_ex}')
+        return False
+
+
+async def update_loyalty_programs():
+    url = 'https://api-ru.iiko.services/api/1/loyalty/iiko/program'
+    try:
+        try:
+            with open(path_token, 'r', encoding='utf-8') as file:
+                token = json.load(file)
+        except Exception as _ex:
+            iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
+            return False
+
+        org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall', log_level=30, debug=True)
+        for org_id in org_ids:
+            params = {
+                'organizationId': org_id[0],
+                'withoutMarketingCampaigns': False
+            }
+            async with ClientSession() as session:
+                async with session.post(url=url, headers=token, json=params) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        programs = data['Programs']
+                        marketing_camp_ids = []
+                        for program in programs:
+                            marketing_campaigns = program['marketingCampaigns']
+                            for marketing_campaign in marketing_campaigns:
+                                marketing_camp_ids.append(marketing_campaign['id'])
+                            db.query(query="""
+                                INSERT INTO loyalty_program (
+                                    org_id, id, name, description, servicefrom, serviceto, notifyaboutbalancechanges,
+                                    programtype, isactive, walletid, appliedorganizations,
+                                    templatetype, haswelcomebonus, welcomebonussum, isexchangerateenabled, refilltype
+                                    )
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                    ON CONFLICT (id) DO UPDATE SET
+                                        name = EXCLUDED.name,
+                                        description = EXCLUDED.description,
+                                        servicefrom = EXCLUDED.servicefrom,
+                                        serviceto = EXCLUDED.serviceto,
+                                        notifyaboutbalancechanges = EXCLUDED.notifyaboutbalancechanges,
+                                        programtype = EXCLUDED.programtype,
+                                        isactive = EXCLUDED.isactive,
+                                        walletid = EXCLUDED.walletid,
+                                        appliedorganizations = EXCLUDED.appliedorganizations,
+                                        templatetype = EXCLUDED.templatetype,
+                                        haswelcomebonus = EXCLUDED.haswelcomebonus,
+                                        welcomebonussum = EXCLUDED.welcomebonussum,
+                                        isexchangerateenabled = EXCLUDED.isexchangerateenabled,
+                                        refilltype = EXCLUDED.refilltype;
+                                """, values=(
+                                org_id[0], program.get('id'), program.get('name'), program.get('description'),
+                                program.get('serviceFrom'), program.get('serviceTo'),
+                                program.get('notifyAboutBalanceChanges'),
+                                program.get('programType'), program.get('isActive'), program.get('walletId'),
+                                program.get('appliedOrganizations'),
+                                program.get('templateType'), program.get('hasWelcomeBonus'),
+                                program.get('welcomeBonusSum'), program.get('isExchangeRateEnabled'),
+                                program.get('refillType')
+                            ))
+                            for campaign in marketing_campaigns:
+                                db.query(query="""
+                                        INSERT INTO loyalty_marketing_campaigns (
+                                            org_id, programId, id, name, description, isActive, periodFrom,
+                                            periodTo
+                                        )
+                                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                                        ON CONFLICT (id) DO UPDATE SET
+                                            org_id = EXCLUDED.org_id,
+                                            programid = EXCLUDED.programid,
+                                            id = EXCLUDED.id,
+                                            name = EXCLUDED.name,
+                                            description = EXCLUDED.description,
+                                            isActive = EXCLUDED.isActive,
+                                            periodFrom = EXCLUDED.periodFrom,
+                                            periodTo = EXCLUDED.periodTo
+                                        """, values=(
+                                    org_id[0], campaign.get('programId'), campaign.get('id'), campaign.get('name'),
+                                    campaign.get('description'),
+                                    campaign.get('isActive'), campaign.get('periodFrom'), campaign.get('periodTo')
+                                ))
+                    else:
+                        iiko_cloud_api_logger.error(
+                            f'Update loyalty programs status error: {resp.status} | {await resp.text()}')
+                        return False
+        return True
+    except Exception as _ex:
+        iiko_cloud_api_logger.error(f'Update loyalty programs error: {_ex}')
+        return False
+
+
+async def update_customer_categories():
+    url = 'https://api-ru.iiko.services/api/1/loyalty/iiko/customer_category'
+    try:
+        try:
+            with open(path_token, 'r', encoding='utf-8') as file:
+                token = json.load(file)
+        except Exception as _ex:
+            iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
+            return False
+
+        org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall')
+        for org_id in org_ids:
+            params = {
+                'organizationId': org_id[0],
+            }
+            async with ClientSession() as session:
+                async with session.post(url=url, headers=token, json=params) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        categories = data['guestCategories']
+                        for category in categories:
+                            db.query(query="""
+                            INSERT INTO customer_categories (
+                                org_id, id, name, isactive, isdefaultfornewguests) VALUES (
+                                    %s, %s, %s, %s, %s) ON CONFLICT (id) DO UPDATE SET
+                                    id = EXCLUDED.id,
+                                    name = EXCLUDED.name,
+                                    isactive = EXCLUDED.isActive,
+                                    isdefaultfornewguests = EXCLUDED.isDefaultfornewguests
+                            """, values=(
+                                org_id[0],
+                                category.get('id'),
+                                category.get('name'),
+                                category.get('isActive'),
+                                category.get('isDefaultForNewGuests')
+                            ))
+                    else:
+                        iiko_cloud_api_logger.error(
+                            f'Update customer_categories status error: {resp.status} | {await resp.text()}')
+                        return False
+        return True
+    except Exception as _ex:
+        iiko_cloud_api_logger.error(f'Update customer_categories error: {_ex}')
+        return False
+
+
+async def create_update_customer(user_id):
+    url = 'https://api-ru.iiko.services/api/1/loyalty/iiko/customer/create_or_update'
+    try:
+        try:
+            with open(path_token, 'r', encoding='utf-8') as file:
+                token = json.load(file)
+        except Exception as _ex:
+            iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
+            return False
+        result = db.query(query="""SELECT guest_id, name, middlename, surname, birthday, sex, phone, email, referrer_id, 
+        consent_status, receive_promo, comment, card_track, card_number
+                                           FROM customers WHERE user_id=%s""", values=(user_id,),
+                          fetch='fetchone')
+
+        if result:
+            guest_id, name, middle_name, surname, birthday, sex, phone, email, referrer_id, consent_status, promo, comment, card_track, card_number = (
+                value if value is not None else None for value in result
+            )
+            if card_track or card_number is None:
+                card_track, card_number = await generate_card(user_id)
+
+            org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall')
+            for org_id in org_ids:
+                params = {
+                    'id': guest_id,
+                    'organizationId': org_id[0],
+                    'phone': phone,
+                    'cardTrack': card_track,
+                    'cardNumber': card_number,
+                    'name': name,
+                    'middleName': middle_name,
+                    'surName': surname,
+                    'birthday': f'{datetime.strptime(birthday, "%d.%m.%Y").strftime("%Y-%m-%d 00:00:00.000")}',
+                    'email': email,
+                    'sex': int(sex),
+                    'referrerId': referrer_id,
+                    'consentStatus': int(consent_status),
+                    'shouldReceivePromoActionsInfo': promo,
+                    'userData': comment
+                }
+
+                async with ClientSession() as session:
+                    async with session.post(url=url, headers=token, json=params) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            guest_id = data['id']
+                            db.query(query='UPDATE customers SET guest_id = %s, category = %s WHERE user_id = %s',
+                                     values=(guest_id, "FRIEND", user_id))
+                            db.query(query='UPDATE users SET is_registered=TRUE WHERE user_id=%s', values=(user_id,))
+
+                            user_check = db.query(
+                                query="SELECT name FROM employee_server WHERE name ILIKE %s AND name ILIKE %s",
+                                values=(f'%{surname}%', f'%{name}%'), fetch='fetchone')
+                            if user_check:
+                                db.query(query="""BEGIN;
+                                                  INSERT INTO employee_list (emp_id, phone, user_id) 
+                                                  VALUES (
+                                                    (SELECT employee_id FROM employee_server WHERE name ILIKE %s AND name ILIKE %s LIMIT 1),
+                                                    %s,  -- phone
+                                                    %s   -- user_id
+                                                  )
+                                                  ON CONFLICT DO NOTHING;
+                                                  UPDATE employee_list SET name=(SELECT name FROM employee_server WHERE name ILIKE %s AND name ILIKE %s LIMIT 1)
+                                                  WHERE user_id=%s""",
+                                         values=(
+                                         f'%{surname}%', f'%{name}%', phone, user_id, f'%{surname}%', f'%{name}%',
+                                         user_id))
+                                db.query(query='UPDATE users SET is_employee=TRUE WHERE user_id=%s', values=(user_id,))
+                                url_1 = 'https://api-ru.iiko.services/api/1/loyalty/iiko/customer_category/add'
+                                staff_category_id = \
+                                db.query(query='SELECT id FROM customer_categories WHERE name=%s', values=('STAFF',),
+                                         fetch='fetchone')[0]
+                                params_1 = {
+                                    "customerId": guest_id,
+                                    "categoryId": staff_category_id,
+                                    "organizationId": org_id[0]
+                                }
+                                async with ClientSession() as session_1:
+                                    async with session_1.post(url=url_1, headers=token, json=params_1) as resp_1:
+                                        if resp_1.status != 200:
+                                            iiko_cloud_api_logger.error(
+                                                f'Add STAFF category for [{user_id}] failed with error: {resp_1.status} | {await resp_1.text()}')
+                                        else:
+                                            db.query(query='UPDATE customers SET category = %s WHERE user_id = %s',
+                                                     values=("STAFF", user_id))
+                                            return True
+                        else:
+                            iiko_cloud_api_logger.error(
+                                f'Create customer status error: {resp.status}\n Error: {await resp.text()}')
+                            return False
+            return True
+    except Exception as _ex:
+        iiko_cloud_api_logger.error(f'Create customer[{user_id}] error: {_ex}')
+        return False
+
+
+async def get_customer(user_id):
+    url = 'https://api-ru.iiko.services/api/1/loyalty/iiko/customer/info'
+    try:
+        try:
+            with open(path_token, 'r', encoding='utf-8') as file:
+                token = json.load(file)
+        except Exception as _ex:
+            iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
+            return False
+        org_id = db.query(query="SELECT org_id FROM organizations WHERE name=%s", values=('Фаринелла',),
+                          fetch='fetchone')
+        customer_id = db.query(query='SELECT guest_id FROM customers WHERE user_id=%s', values=(user_id,),
+                               fetch='fetchone')
+        params = {
+            "id": customer_id,
+            "type": "id",
+            "organizationId": org_id
+        }
+        async with ClientSession() as session:
+            async with session.post(url=url, headers=token, json=params) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    info = {
+                        'name': f"{data['surname']} {data['name']} {data['middlename']}",
+                        'phone': data['phone'],
+                        'email': data['email'],
+                        'birthday': data['birthday'],
+                        'sex': data['sex'],
+                        'card_number': data['cards']['number'],
+                        'consent_status': data['consentStatus'],
+                        'categories': data['categories'],
+                        'wallet_balance': data['walletBalances'],
+                        'should_receive_promo_actions_info': data['shouldReceivePromoActionsInfo'],
+                        'should_receive_royalty_info': data['shouldReceiveLoyaltyInfo'],
+                        'should_receive_orderStatus_info': data['shouldReceiveOrderStatusInfo'],
+                        'is_deleted': data['isDeleted']
+                    }
+                    return info
+    except Exception as _ex:
+        iiko_cloud_api_logger.error(f'Get customer[{user_id}] info error: {_ex}')
         return False
 
 
@@ -169,7 +449,7 @@ async def check_shift(employee_id):
             term_ids_dict = {}
             for org_id in org_ids_list:
                 term_id = db.query(query="SELECT terminal_groups FROM organizations WHERE org_id=%s", fetch='fetchall',
-                                    values=(org_id,), log_level=30, debug=True)[0][0]
+                                   values=(org_id,), log_level=30, debug=True)[0][0]
                 try:
                     term_id = term_id.replace('{', '').replace('}', '').split(',')
                 except:
@@ -352,8 +632,9 @@ async def update_menu():
                                 continue
                             item_id = product.get('id')
                             name = product.get('name')
-                            db.query(query="INSERT INTO menu (org_id, name, item_id) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
-                                     values=(org_id, name, item_id), log_level=30, debug=True)
+                            db.query(
+                                query="INSERT INTO menu (org_id, name, item_id) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+                                values=(org_id, name, item_id), log_level=30, debug=True)
         return status
     except Exception as _ex:
         iiko_cloud_api_logger.critical(f'Error updating menu: {_ex}')

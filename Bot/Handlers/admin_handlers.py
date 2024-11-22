@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 
 from Bot import dialogs
-from Bot.Keyboards.inline_keyboards import admin_menu, create_white_list_keyboard
+from Bot.Keyboards.inline_keyboards import admin_menu #, create_white_list_keyboard
 from Bot.Utils.states import WhiteList
 from Database.database import db
 from Database.database_query import check_stop_list

@@ -1,9 +1,16 @@
 import calendar
+import io
+import random
+import string
 from datetime import datetime
+
+import qrcode
+import segno
 from prettytable import PrettyTable
 import pandas as pd
 
 from Bot import dialogs
+from Database.database import db
 
 
 async def attendance_sum(date_from_list, date_to_list, date_to):
@@ -89,4 +96,48 @@ async def get_date_range(data):
             date_to = date_from.replace(day=calendar.monthrange(date_from.year, date_from.month)[1])
 
         return date_from, date_to
+
+
+async def generate_card(user_id):
+    characters = string.ascii_letters + string.digits + "=!"
+    random_string = f'{user_id}_'+''.join(random.choice(characters) for _ in range(30))
+    db.query(query="UPDATE customers SET card_number=%s, card_track=%s WHERE user_id=%s",
+             values=(random_string, random_string, user_id))
+
+    return random_string, random_string
+
+async def generate_qr_card(card_number):
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+
+    qr.add_data(card_number)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill='black', back_color='white')
+
+    byte_io = io.BytesIO()
+    img.save(byte_io, format='PNG')
+    byte_io.seek(0)
+
+    return byte_io.getvalue()
+
+
+async def find_referrer_name(guest_id):
+    try:
+        name, surname, middlename = db.query(query='SELECT name, surname, middlename FROM customers WHERE guest_id=%s',
+                                             values=(guest_id,), fetch='fetchone')
+        if middlename is None:
+            name_text = f'{surname} {name}'
+        else:
+            name_text = f'{surname} {name} {middlename}'
+
+        return name_text
+    except:
+        return dialogs.RU_ru['empty']
+
+
 

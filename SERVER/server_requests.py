@@ -3,6 +3,7 @@
 import datetime
 import os
 
+import pytz
 from aiohttp import web
 
 from API_SCRIPTS.iikoAPI import dp, bot
@@ -10,12 +11,16 @@ from Bot import dialogs
 from Bot.Keyboards.inline_keyboards import create_menu_keyboard
 from Bot.Utils.logging_settings import server_logger
 from Database.database import db
+# from SERVER import server_dialogs
 from SERVER.server_handlers import stop_list_server
 from path import VALIDATION_DIR
 
 
 async def index(request) -> web.Response:
     return web.Response(text="The server is temporarily under maintenance", status=200)
+
+async def privacy(request) -> web.Response:
+    return web.Response(text=dialogs.privacy, status=200)
 
 
 async def telegram_webhook(request) -> web.Response:
@@ -58,7 +63,7 @@ async def iiko_webhook(request) -> web.Response:
                     try:
                         if event_info.get('opened'):
                             db.query(query="UPDATE employee_list SET time_opened=%s WHERE user_id=%s",
-                                     values=(datetime.datetime.now().strftime("%m/%d/%Y %H:%M:%S"), user_id))
+                                     values=(datetime.datetime.now(pytz.timezone('Europe/Moscow')).strftime("%m/%d/%Y %H:%M:%S"), user_id))
                             if db.query(query="SELECT receive_upd_shift FROM employee_list WHERE user_id=%s",
                                         values=(user_id,), fetch='fetchone', log_level=30, debug=True)[0]:
                                 await bot.send_message(chat_id=user_id,
@@ -71,7 +76,7 @@ async def iiko_webhook(request) -> web.Response:
                             try:
                                 time_opened = db.query(query='SELECT time_opened FROM employee_list WHERE user_id=%s',
                                                        values=(user_id,), fetch='fetchone')[0]
-                                time_now = datetime.datetime.now().strftime("%m/%d/%Y %H:%M:%S")
+                                time_now = datetime.datetime.now(pytz.timezone('Europe/Moscow')).strftime("%m/%d/%Y %H:%M:%S")
                                 time_now = datetime.datetime.strptime(time_now, '%m/%d/%Y %H:%M:%S')
                                 delta = (time_now - datetime.datetime.strptime(time_opened, '%m/%d/%Y %H:%M:%S')).total_seconds()
                                 delta = datetime.timedelta(seconds=delta)
