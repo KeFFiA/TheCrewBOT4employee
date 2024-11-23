@@ -95,6 +95,7 @@ async def card_cmd(message: Message, state: FSMContext):
                                     reply_markup=await create_user_menu_card(),
                                     photo=input_file,
                                     protect_content=True)
+    await state.clear()
 
 
 @user_router.message(F.contact)
