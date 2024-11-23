@@ -4,13 +4,14 @@ from aiogram.types import Message, CallbackQuery
 
 from API_SCRIPTS.GeoAPI import check_geo
 from API_SCRIPTS.iikoAPI import employees_attendance
-from API_SCRIPTS.iiko_cloudAPI import shift_close, shift_open
+from API_SCRIPTS.iiko_cloudAPI import shift_close, shift_open, get_customer
 from Bot import dialogs
 from Bot.Keyboards.inline_keyboards import create_menu_keyboard, choose_menu, choose_org_menu, \
     create_choose_time_keyboard, create_employee_menu, employee_settings_menu
 from Bot.Keyboards.keyboards import send_location
 from Bot.Utils.states import Choose
 from Database.database import db
+from Scripts.scripts import get_wallet_balance
 
 employee_router = Router()
 
@@ -112,68 +113,79 @@ async def stats_menus(call: CallbackQuery):
     data = call.data.removeprefix('stats_')
     name = \
     db.query(query="SELECT name FROM employee_list WHERE user_id=%s", values=(call.from_user.id,), fetch='fetchone')[0]
+    user_info = await get_customer(call.from_user.id)
+    wallet = await get_wallet_balance(user_info=user_info)
     if data == 'stats':
         await call.message.edit_text(
             text=dialogs.RU_ru['stats'].format(name=name, hours=dialogs.RU_ru['choose_time']['text'],
-                                               table=dialogs.RU_ru['choose_time']['table']),
+                                               table=dialogs.RU_ru['choose_time']['table'], wallet=wallet),
             reply_markup=await create_choose_time_keyboard(), parse_mode='MARKDOWN')
     else:
         table, result = await employees_attendance(user_id=call.from_user.id, data=data)
         try:
             await call.message.edit_text(
-                text=dialogs.RU_ru['stats'].format(name=name, hours=result, table=table),
+                text=dialogs.RU_ru['stats'].format(name=name, hours=result, table=table, wallet=wallet),
                 reply_markup=await create_choose_time_keyboard(), parse_mode='MARKDOWN')
         except:
             await call.answer()
 
 
 @employee_router.callback_query(F.data.startswith('employee_settings_'))
-async def settings_menus(call: CallbackQuery):
+async def settings_menu(call: CallbackQuery):
     data = call.data.removeprefix('employee_settings_')
-    receive = db.query(
-        query="SELECT (receive_upd_shift, receive_shift_time, receive_messages) FROM employee_list WHERE user_id=%s",
+    upd, time, msg = db.query(
+        query="SELECT receive_upd_shift, receive_shift_time, receive_messages FROM employee_list WHERE user_id=%s",
         values=(call.from_user.id,), fetch='fetchone')
 
-    items = []
-    for item in receive.replace('(', '').replace(')', '').split(','):
-        if item == 't':
-            item = '✅'
-        else:
-            item = '❌'
-        items.append(item)
+    if data == 'menu':
+        await call.message.edit_text(text=dialogs.RU_ru['employee_settings'].format(upd=dialogs.RU_ru['marks'][upd],
+                                                                                    time=dialogs.RU_ru['marks'][time],
+                                                                                    msg=dialogs.RU_ru['marks'][msg]),
+                                     reply_markup=await employee_settings_menu())
 
     if data == 'receive_upd':
-        if items[0] == '✅':
+        if upd:
             db.query(query="UPDATE employee_list SET receive_upd_shift=FALSE WHERE user_id=%s",
                      values=(call.from_user.id,))
+            await call.message.edit_text(text=dialogs.RU_ru['employee_settings'].format(upd=dialogs.RU_ru['marks'][False],
+                                                                                        time=dialogs.RU_ru['marks'][time],
+                                                                                        msg=dialogs.RU_ru['marks'][msg]),
+                                         reply_markup=await employee_settings_menu())
         else:
             db.query(query="UPDATE employee_list SET receive_upd_shift=TRUE WHERE user_id=%s",
                      values=(call.from_user.id,))
+            await call.message.edit_text(text=dialogs.RU_ru['employee_settings'].format(upd=dialogs.RU_ru['marks'][True],
+                                                                                        time=dialogs.RU_ru['marks'][time],
+                                                                                        msg=dialogs.RU_ru['marks'][msg]),
+                                         reply_markup=await employee_settings_menu())
     if data == 'receive_time':
-        if items[1] == '✅':
+        if time:
             db.query(query="UPDATE employee_list SET receive_shift_time=FALSE WHERE user_id=%s",
                      values=(call.from_user.id,))
+            await call.message.edit_text(text=dialogs.RU_ru['employee_settings'].format(upd=dialogs.RU_ru['marks'][upd],
+                                                                                        time=dialogs.RU_ru['marks'][False],
+                                                                                        msg=dialogs.RU_ru['marks'][msg]),
+                                         reply_markup=await employee_settings_menu())
         else:
             db.query(query="UPDATE employee_list SET receive_shift_time=TRUE WHERE user_id=%s",
                      values=(call.from_user.id,))
+            await call.message.edit_text(text=dialogs.RU_ru['employee_settings'].format(upd=dialogs.RU_ru['marks'][upd],
+                                                                                        time=dialogs.RU_ru['marks'][True],
+                                                                                        msg=dialogs.RU_ru['marks'][msg]),
+                                         reply_markup=await employee_settings_menu())
     if data == 'receive_messages':
-        if items[2] == '✅':
+        if msg:
             db.query(query="UPDATE employee_list SET receive_messages=FALSE WHERE user_id=%s",
                      values=(call.from_user.id,))
+            await call.message.edit_text(text=dialogs.RU_ru['employee_settings'].format(upd=dialogs.RU_ru['marks'][upd],
+                                                                                        time=dialogs.RU_ru['marks'][time],
+                                                                                        msg=dialogs.RU_ru['marks'][False]),
+                                         reply_markup=await employee_settings_menu())
         else:
             db.query(query="UPDATE employee_list SET receive_messages=TRUE WHERE user_id=%s",
                      values=(call.from_user.id,))
+            await call.message.edit_text(text=dialogs.RU_ru['employee_settings'].format(upd=dialogs.RU_ru['marks'][upd],
+                                                                                        time=dialogs.RU_ru['marks'][time],
+                                                                                        msg=dialogs.RU_ru['marks'][True]),
+                                         reply_markup=await employee_settings_menu())
 
-    receive = db.query(
-        query="SELECT (receive_upd_shift, receive_shift_time, receive_messages) FROM employee_list WHERE user_id=%s",
-        values=(call.from_user.id,), fetch='fetchone')
-
-    items = []
-    for item in receive.replace('(', '').replace(')', '').split(','):
-        if item == 't':
-            item = '✅'
-        else:
-            item = '❌'
-        items.append(item)
-    await call.message.edit_text(text=dialogs.RU_ru['employee_settings'].format(items[0], items[1], items[2]),
-                                 reply_markup=await employee_settings_menu())

@@ -24,15 +24,14 @@ async def create_menu_keyboard(user_id):
 
     builder = InlineKeyboardBuilder()
     builder.attach(InlineKeyboardBuilder.from_markup(keyboard_main))
-
-    if db.query(query='SELECT is_employee FROM users WHERE user_id=%s', values=(user_id,)) is True:
+    is_employee = db.query(query='SELECT is_employee FROM users WHERE user_id=%s', values=(user_id,), fetch='fetchone')[0]
+    if is_employee is True:
         empl_butn = InlineKeyboardButton(callback_data='employee', text=dialogs.RU_ru['navigation']['employee_menu'])
         empl_kb = InlineKeyboardMarkup(inline_keyboard=[[empl_butn]])
         builder.attach(InlineKeyboardBuilder.from_markup(empl_kb))
 
-    admin = db.query(query="SELECT is_admin FROM users WHERE user_id=%s", fetch='fetchone', values=(user_id,),
-                     log_level=30, debug=True)
-    if admin is True:
+    is_admin = db.query(query="SELECT is_admin FROM users WHERE user_id=%s", fetch='fetchone', values=(user_id,))[0]
+    if is_admin is True:
         admin_but = InlineKeyboardButton(callback_data='admin', text=dialogs.RU_ru['navigation']['admin_menu'])
         admin_kb = InlineKeyboardMarkup(inline_keyboard=[[admin_but]])
         builder.attach(InlineKeyboardBuilder.from_markup(admin_kb))
@@ -43,26 +42,27 @@ async def create_employee_menu(user_id):
     stats = InlineKeyboardButton(callback_data='stats_stats', text=dialogs.RU_ru['navigation']['stats'])
     open = InlineKeyboardButton(callback_data='shift_open', text=dialogs.RU_ru['navigation']['open'])
     close = InlineKeyboardButton(callback_data='shift_close', text=dialogs.RU_ru['navigation']['close'])
+    menu = InlineKeyboardButton(callback_data='main_menu', text=dialogs.RU_ru['navigation']['menu'])
+    settings = InlineKeyboardButton(callback_data='employee_settings_menu', text=dialogs.RU_ru['navigation']['settings'])
 
     builder = InlineKeyboardBuilder()
-    keyboard_main = InlineKeyboardMarkup(inline_keyboard=[[stats], ])
+    keyboard_main = InlineKeyboardMarkup(inline_keyboard=[[stats], [settings]])
     builder.attach(InlineKeyboardBuilder.from_markup(keyboard_main))
 
-    empl_id = db.query(query="SELECT emp_id FROM employee_list WHERE user_id=%s", values=(user_id,), fetch='fetchone',
-                       log_level=30, debug=True)[0]
-    try:
-        if db.query(query="SELECT employee_id FROM employee_couriers WHERE employee_id=%s", values=(empl_id,),
-                    fetch='fetchone',
-                    log_level=30, debug=True)[0] == empl_id:
+    empl_id = db.query(query="SELECT emp_id FROM employee_list WHERE user_id=%s", values=(user_id,), fetch='fetchone')[0]
+    if db.query(query="SELECT employee_id FROM employee_couriers WHERE employee_id=%s", values=(empl_id,),
+                fetch='fetchone')[0] == empl_id:
 
-            if await check_shift(empl_id):
-                keyboard_attendance = InlineKeyboardMarkup(inline_keyboard=[[close]])
-            else:
-                keyboard_attendance = InlineKeyboardMarkup(inline_keyboard=[[open]])
+        if await check_shift(empl_id):
+            keyboard_attendance = InlineKeyboardMarkup(inline_keyboard=[[close], [menu]])
+        else:
+            keyboard_attendance = InlineKeyboardMarkup(inline_keyboard=[[open], [menu]])
 
-            builder.attach(InlineKeyboardBuilder.from_markup(keyboard_attendance))
-    except:
-        pass
+        builder.attach(InlineKeyboardBuilder.from_markup(keyboard_attendance))
+
+    return builder.as_markup()
+
+
 
 
 async def create_user_menu_me():
@@ -192,11 +192,14 @@ async def employee_settings_menu():
 
 
 async def settings_menu():
-    receive_promo = InlineKeyboardButton(callback_data='settings_receive_promo',
-                                         text=dialogs.RU_ru['navigation']['promo'])
+    tg_promo = InlineKeyboardButton(callback_data='settings_tg_promo', text=dialogs.RU_ru['navigation']['tg_promo'])
+    sms_promo = InlineKeyboardButton(callback_data='settings_sms_promo', text=dialogs.RU_ru['navigation']['sms_promo'])
+    email_promo = InlineKeyboardButton(callback_data='settings_email_promo', text=dialogs.RU_ru['navigation']['email_promo'])
     back = InlineKeyboardButton(callback_data='main_menu', text=dialogs.RU_ru['navigation']['back'])
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[receive_promo], [back]])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[tg_promo, sms_promo],
+                                                     [email_promo],
+                                                     [back]])
 
     return keyboard
 

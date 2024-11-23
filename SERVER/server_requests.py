@@ -11,7 +11,6 @@ from Bot import dialogs
 from Bot.Keyboards.inline_keyboards import create_menu_keyboard
 from Bot.Utils.logging_settings import server_logger
 from Database.database import db
-# from SERVER import server_dialogs
 from SERVER.server_handlers import stop_list_server
 from path import VALIDATION_DIR
 
@@ -68,7 +67,7 @@ async def iiko_webhook(request) -> web.Response:
                                         values=(user_id,), fetch='fetchone', log_level=30, debug=True)[0]:
                                 await bot.send_message(chat_id=user_id,
                                                        text=dialogs.RU_ru['server']['shift_open'].format(user_name,
-                                                                                                         datetime.datetime.now().strftime("%H:%M")),
+                                                                                                         datetime.datetime.now(pytz.timezone('Europe/Moscow')).strftime("%H:%M")),
                                                        reply_markup=await create_menu_keyboard(user_id))
                             else:
                                 pass
@@ -77,8 +76,8 @@ async def iiko_webhook(request) -> web.Response:
                                 time_opened = db.query(query='SELECT time_opened FROM employee_list WHERE user_id=%s',
                                                        values=(user_id,), fetch='fetchone')[0]
                                 time_now = datetime.datetime.now(pytz.timezone('Europe/Moscow')).strftime("%m/%d/%Y %H:%M:%S")
-                                time_now = datetime.datetime.strptime(time_now, '%m/%d/%Y %H:%M:%S')
-                                delta = (time_now - datetime.datetime.strptime(time_opened, '%m/%d/%Y %H:%M:%S')).total_seconds()
+                                _time_now = datetime.datetime.strptime(time_now, '%m/%d/%Y %H:%M:%S')
+                                delta = (_time_now - datetime.datetime.strptime(time_opened, '%m/%d/%Y %H:%M:%S')).total_seconds()
                                 delta = datetime.timedelta(seconds=delta)
                                 delta = f"{delta.seconds // 3600}:{(delta.seconds // 60) % 60:02}"
                             except:
@@ -109,7 +108,7 @@ async def iiko_webhook(request) -> web.Response:
                     new_items_text, already_stop_text = await stop_list_server()
                     if new_items_text and already_stop_text == 'Break':
                         return web.Response(status=204, reason='No changes', text='No changes from stop-list update')
-                    user_ids = db.query(query="SELECT user_id FROM white_list WHERE admin IS TRUE", fetch='fetchall',
+                    user_ids = db.query(query="SELECT user_id FROM users WHERE users.is_admin IS TRUE", fetch='fetchall',
                                         log_level=30, debug=True)
                     for user_id in user_ids:
                         try:

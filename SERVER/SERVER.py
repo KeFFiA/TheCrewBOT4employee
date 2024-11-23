@@ -7,8 +7,8 @@ from Bot.Utils.logging_settings import servers_logger
 from SERVER.server_requests import iiko_webhook, index, handle_validation, privacy
 from path import CERT_PATH, KEY_PATH
 
-# ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-# ssl_context.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)
+ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+ssl_context.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)
 
 app = web.Application()
 

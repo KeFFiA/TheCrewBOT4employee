@@ -5,9 +5,10 @@ import string
 from datetime import datetime
 
 import qrcode
-import segno
+
 from prettytable import PrettyTable
 import pandas as pd
+
 
 from Bot import dialogs
 from Database.database import db
@@ -138,6 +139,21 @@ async def find_referrer_name(guest_id):
         return name_text
     except:
         return dialogs.RU_ru['empty']
+
+
+async def get_wallet_balance(user_info):
+    for wallet_info in user_info['wallets']:
+        if wallet_info['name'] == 'Питание персонала':
+            wallet = wallet_info['balance']
+            wallet_result = wallet - 15000
+            if wallet_result < 0:
+                wallet_result = wallet_result * -1
+            else:
+                wallet_result = 0
+            return wallet_result
+        else:
+            return dialogs.RU_ru['error_wallet']
+
 
 
 

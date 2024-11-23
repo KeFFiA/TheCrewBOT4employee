@@ -316,28 +316,48 @@ async def create_update_customer(user_id):
             guest_id, name, middle_name, surname, birthday, sex, phone, email, referrer_id, consent_status, promo, comment, card_track, card_number = (
                 value if value is not None else None for value in result
             )
-            if card_track or card_number is None:
+            if card_track is None or card_number is None:
+                card_check = False
                 card_track, card_number = await generate_card(user_id)
+            else:
+                card_check = True
 
             org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall')
             for org_id in org_ids:
-                params = {
-                    'id': guest_id,
-                    'organizationId': org_id[0],
-                    'phone': phone,
-                    'cardTrack': card_track,
-                    'cardNumber': card_number,
-                    'name': name,
-                    'middleName': middle_name,
-                    'surName': surname,
-                    'birthday': f'{datetime.strptime(birthday, "%d.%m.%Y").strftime("%Y-%m-%d 00:00:00.000")}',
-                    'email': email,
-                    'sex': int(sex),
-                    'referrerId': referrer_id,
-                    'consentStatus': int(consent_status),
-                    'shouldReceivePromoActionsInfo': promo,
-                    'userData': comment
-                }
+                if card_check:
+                    params = {
+                        'id': guest_id,
+                        'organizationId': org_id[0],
+                        'phone': phone,
+                        'name': name,
+                        'middleName': middle_name,
+                        'surName': surname,
+                        'birthday': f'{datetime.strptime(birthday, "%d.%m.%Y").strftime("%Y-%m-%d 00:00:00.000")}',
+                        'email': email,
+                        'sex': int(sex),
+                        'referrerId': referrer_id,
+                        'consentStatus': int(consent_status),
+                        'shouldReceivePromoActionsInfo': promo,
+                        'userData': comment
+                    }
+                else:
+                    params = {
+                        'id': guest_id,
+                        'organizationId': org_id[0],
+                        'phone': phone,
+                        'cardTrack': card_track,
+                        'cardNumber': card_number,
+                        'name': name,
+                        'middleName': middle_name,
+                        'surName': surname,
+                        'birthday': f'{datetime.strptime(birthday, "%d.%m.%Y").strftime("%Y-%m-%d 00:00:00.000")}',
+                        'email': email,
+                        'sex': int(sex),
+                        'referrerId': referrer_id,
+                        'consentStatus': int(consent_status),
+                        'shouldReceivePromoActionsInfo': promo,
+                        'userData': comment
+                    }
 
                 async with ClientSession() as session:
                     async with session.post(url=url, headers=token, json=params) as resp:
@@ -377,13 +397,21 @@ async def create_update_customer(user_id):
                                 }
                                 async with ClientSession() as session_1:
                                     async with session_1.post(url=url_1, headers=token, json=params_1) as resp_1:
-                                        if resp_1.status != 200:
-                                            iiko_cloud_api_logger.error(
-                                                f'Add STAFF category for [{user_id}] failed with error: {resp_1.status} | {await resp_1.text()}')
-                                        else:
+                                        if resp_1.status == 200:
                                             db.query(query='UPDATE customers SET category = %s WHERE user_id = %s',
                                                      values=("STAFF", user_id))
-                                            return True
+                                            program_result = await add_customer_program(guest_id)
+                                            if not program_result:
+                                                return False
+                                        else:
+                                            data_1 = await resp_1.json()
+                                            if data_1['description'] == 'Category binded to another customer':
+                                                continue
+                                            else:
+                                                iiko_cloud_api_logger.error(
+                                                    f'Add STAFF category for [{user_id}] failed with error: {resp_1.status} | {await resp_1.text()}')
+                                                return False
+
                         else:
                             iiko_cloud_api_logger.error(
                                 f'Create customer status error: {resp.status}\n Error: {await resp.text()}')
@@ -393,6 +421,49 @@ async def create_update_customer(user_id):
         iiko_cloud_api_logger.error(f'Create customer[{user_id}] error: {_ex}')
         return False
 
+
+async def add_customer_program(guest_id):
+    url = 'https://api-ru.iiko.services/api/1/loyalty/iiko/customer/program/add'
+    try:
+        try:
+            with open(path_token, 'r', encoding='utf-8') as file:
+                token = json.load(file)
+        except Exception as _ex:
+            iiko_cloud_api_logger.critical(f'Error reading token: \n{_ex}')
+            return False
+
+        org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall')
+        prog_id = db.query(query="SELECT programid FROM loyalty_marketing_campaigns WHERE name ILIKE %s OR name ILIKE %s",
+                           values=('STAFF питание', 'Стафф питание'), fetch='fetchone')[0]
+        for org_id in org_ids:
+            params = {
+                'organizationId': org_id[0],
+                'programId': prog_id,
+                'customerId': guest_id,
+            }
+            async with ClientSession() as session:
+                async with session.post(url=url, headers=token, json=params) as resp:
+                    if resp.status == 200:
+                        wallet_id = db.query(query='SELECT walletid FROM loyalty_program WHERE id=%s', values=(prog_id,), fetch='fetchone')[0]
+                        url_1 = 'https://api-ru.iiko.services/api/1/loyalty/iiko/customer/wallet/topup'
+                        params_1 = {
+                            "customerId": guest_id,
+                            "walletId": wallet_id,
+                            "sum": 15000,
+                            "organizationId": org_id[0]
+                        }
+                        async with ClientSession() as session_1:
+                            async with session_1.post(url=url_1, headers=token, json=params_1) as resp_1:
+                                if resp_1.status == 200:
+                                    return True
+                                else:
+                                    iiko_cloud_api_logger.error(f'Popup user [{guest_id}] wallet status error: {resp_1.status} | {await resp_1.text()}')
+                                    return False
+                    else:
+                        iiko_cloud_api_logger.error(f'Add customer to program status error: {resp.status} | {await resp.text()}')
+
+    except Exception as _ex:
+        iiko_cloud_api_logger.critical(f'Add customer to program failed with error: \n{_ex}')
 
 async def get_customer(user_id):
     url = 'https://api-ru.iiko.services/api/1/loyalty/iiko/customer/info'
@@ -404,9 +475,9 @@ async def get_customer(user_id):
             iiko_cloud_api_logger.critical(f'Error reading token: {_ex}')
             return False
         org_id = db.query(query="SELECT org_id FROM organizations WHERE name=%s", values=('Фаринелла',),
-                          fetch='fetchone')
+                          fetch='fetchone')[0]
         customer_id = db.query(query='SELECT guest_id FROM customers WHERE user_id=%s', values=(user_id,),
-                               fetch='fetchone')
+                               fetch='fetchone')[0]
         params = {
             "id": customer_id,
             "type": "id",
@@ -416,16 +487,26 @@ async def get_customer(user_id):
             async with session.post(url=url, headers=token, json=params) as resp:
                 if resp.status == 200:
                     data = await resp.json()
+                    if data['surname'] is None:
+                        if data['middleName'] is None:
+                            name = data['name']
+                        else:
+                            name = f'{data['name']} {data['middleName']}'
+                    else:
+                        if data['middleName'] is None:
+                            name = f'{data['surname']} {data['name']}'
+                        else:
+                            name = f'{data['surname']} {data['name']} {data['middleName']}'
                     info = {
-                        'name': f"{data['surname']} {data['name']} {data['middlename']}",
+                        'name': name,
                         'phone': data['phone'],
                         'email': data['email'],
                         'birthday': data['birthday'],
                         'sex': data['sex'],
-                        'card_number': data['cards']['number'],
+                        'cards': data['cards'],
                         'consent_status': data['consentStatus'],
                         'categories': data['categories'],
-                        'wallet_balance': data['walletBalances'],
+                        'wallets': data['walletBalances'],
                         'should_receive_promo_actions_info': data['shouldReceivePromoActionsInfo'],
                         'should_receive_royalty_info': data['shouldReceiveLoyaltyInfo'],
                         'should_receive_orderStatus_info': data['shouldReceiveOrderStatusInfo'],

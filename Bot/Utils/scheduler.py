@@ -62,9 +62,10 @@ async def mailing_attendance():
         for user_id in user_ids:
             if now.day == 22:
                 data = 'first_half'
+                await employees_attendance(user_id=user_id[0], data=data, mailing=True)
             elif now.day == 1:
                 data = 'second_half'
-            await employees_attendance(user_id=user_id[0], data=data, mailing=True)
+                await employees_attendance(user_id=user_id[0], data=data, mailing=True)
         scheduler_logger.info(f"Job executed: mailing_attendance at {datetime.now().strftime('%Y-%m-%d | %H:%M:%S')}")
     except Exception as _ex:
         scheduler_logger.error(f"Error executing job send_attendance_for_users: {_ex}")

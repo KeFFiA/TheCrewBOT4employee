@@ -5,10 +5,11 @@ from aiogram.filters import Command, CommandStart, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, BufferedInputFile
 
+from API_SCRIPTS.iikoAPI import employees_attendance
 from API_SCRIPTS.iiko_cloudAPI import create_update_customer
 from Bot import dialogs
 from Bot.Keyboards.inline_keyboards import create_menu_keyboard, create_register_menu, choose_sex_menu, \
-    privacy_keyboard, create_user_menu_me, create_user_menu_card
+    privacy_keyboard, create_user_menu_me, create_user_menu_card, settings_menu
 from Bot.Keyboards.keyboards import send_contact
 from Bot.Utils.states import Register
 from Database.database import db
@@ -20,9 +21,13 @@ user_router = Router()
 # COMMANDS/MESSAGES
 
 @user_router.message(CommandStart())
-async def start_cmd(message: Message, bot: Bot, state: FSMContext, command: CommandObject):
-    user_check = db.query(query="SELECT is_registered FROM users WHERE user_id=%s", values=(message.from_user.id,),
-                          fetch='fetchone')[0]
+async def start_cmd(message: Message, state: FSMContext, command: CommandObject):
+    try:
+        user_check = db.query(query="SELECT is_registered FROM users WHERE user_id=%s", values=(message.from_user.id,),
+                              fetch='fetchone')[0]
+    except:
+        user_check = False
+
     if user_check:
         await message.answer(text=dialogs.RU_ru['navigation']['menu'],
                              reply_markup=await create_menu_keyboard(message.from_user.id))
@@ -78,6 +83,18 @@ async def menu_cmd(message: Message, state: FSMContext):
                          reply_markup=await create_menu_keyboard(message.from_user.id)
                          )
     await state.clear()
+
+
+@user_router.message(Command('card'))
+async def card_cmd(message: Message, state: FSMContext):
+    card_number = db.query(query="""SELECT card_number FROM customers WHERE user_id=%s""", values=(message.from_user.id,),
+                           fetch='fetchone')[0]
+    qr_image = await generate_qr_card(card_number=card_number)
+    input_file = BufferedInputFile(qr_image, 'qr.png')
+    await message.answer_photo(caption=dialogs.RU_ru['user']['card'],
+                                    reply_markup=await create_user_menu_card(),
+                                    photo=input_file,
+                                    protect_content=True)
 
 
 @user_router.message(F.contact)
@@ -247,18 +264,27 @@ async def iiko_menu(call: CallbackQuery):
             _sex = sex_list[0]
 
         if data == 'me':
-            await call.message.delete()
             url = f'https://t.me/TheCrewEnergyBot?start={call.from_user.id}'
-            await call.message.answer(text=dialogs.RU_ru['user']['info'].format(
-                name=_name, phone=phone, email=email, sex=_sex, referrer=referrer_name,
-                user_id=call.from_user.id, birthday=birthday, category=category, url=url
-            ),
-                reply_markup=await create_user_menu_me())
+            try:
+                await call.message.edit_text(text=dialogs.RU_ru['user']['info'].format(
+                    name=_name, phone=phone, email=email, sex=_sex, referrer=referrer_name,
+                    user_id=call.from_user.id, birthday=birthday, category=category, url=url
+                ),
+                    reply_markup=await create_user_menu_me())
+            except:
+                await call.message.delete()
+                await call.message.answer(text=dialogs.RU_ru['user']['info'].format(
+                    name=_name, phone=phone, email=email, sex=_sex, referrer=referrer_name,
+                    user_id=call.from_user.id, birthday=birthday, category=category, url=url
+                ),
+                    reply_markup=await create_user_menu_me())
         if data == 'card':
-            await call.message.delete()
+            try:
+                await call.message.delete()
+            except:
+                pass
             qr_image = await generate_qr_card(card_number=card_number)
             input_file = BufferedInputFile(qr_image, 'qr.png')
-
             await call.message.answer_photo(caption=dialogs.RU_ru['user']['card'],
                                             reply_markup=await create_user_menu_card(),
                                             photo=input_file,
@@ -373,7 +399,52 @@ async def register_step(call: CallbackQuery, state: FSMContext, bot: Bot):
                 reply_markup=await create_register_menu())
 
     if data == 'save':
-        await call.message.edit_text(text=dialogs.RU_ru['register']['consent'], reply_markup=await privacy_keyboard())
+        name, phone, birthday = db.query("SELECT name, phone, birthday FROM customers WHERE user_id=%s",
+                                         values=(call.from_user.id,), fetch='fetchone')
+        if name is None or phone is None or birthday is None:
+            result = db.query(query="""SELECT name, middlename, surname, birthday, sex, phone, email, referrer_id
+                                                                   FROM customers WHERE user_id=%s""",
+                              values=(call.from_user.id,),
+                              fetch='fetchone')
+            if result:
+                sex_list = [dialogs.RU_ru['navigation']['not_match'], dialogs.RU_ru['navigation']['male'],
+                            dialogs.RU_ru['navigation']['female']]
+
+                name, middlename, surname, birthday, sex, phone, email, referrer_id = (
+                    value if value is not None else dialogs.RU_ru['empty'] for value in result
+                )
+                promo = db.query("SELECT receive_promo FROM customers WHERE user_id=%s",
+                                 values=(call.from_user.id,), fetch='fetchone')[0]
+
+                if promo == 'true':
+                    _promo = '✅'
+                else:
+                    _promo = '❌'
+
+                if referrer_id is not None:
+                    referrer_name = await find_referrer_name(referrer_id)
+                else:
+                    referrer_name = dialogs.RU_ru['empty']
+
+                if middlename is not None:
+                    _name = f'{surname} {name} {middlename}'
+                else:
+                    _name = f'{surname} {name}'
+
+                try:
+                    _sex = sex_list[int(sex)]
+                except:
+                    _sex = sex_list[0]
+
+                await call.message.edit_text(
+                    text=dialogs.RU_ru['register']['fields_error'].format(us_name=call.from_user.first_name,
+                                                                   name=_name, birthday=birthday,
+                                                                   sex=_sex,
+                                                                   referrer=referrer_name,
+                                                                   phone=phone, email=email, promo=_promo),
+                    reply_markup=await create_register_menu())
+        else:
+            await call.message.edit_text(text=dialogs.RU_ru['register']['consent'], reply_markup=await privacy_keyboard())
 
     if data == 'privacy_yes' or data == 'privacy_no':
         privacy_list = ['privacy_yes', 'privacy_no']
@@ -388,9 +459,73 @@ async def register_step(call: CallbackQuery, state: FSMContext, bot: Bot):
         else:
             await call.message.edit_text(text=dialogs.RU_ru['register']['error'])
 
-# @user_router.callback_query(F.data.startswith('settings_'))
-# async def settings_menus(call: CallbackQuery):
-#     data = call.data.removeprefix('settings_')
-#
-#     await call.message.edit_text(text=dialogs.RU_ru['settings'].format(items[0], items[1], items[2]),
-#                                  reply_markup=await settings_menu())
+
+@user_router.callback_query(F.data.startswith('settings_'))
+async def settings_menus(call: CallbackQuery):
+    data = call.data.removeprefix('settings_')
+    tg, sms, email = db.query(query="SELECT tg_promo, sms_promo, email_promo FROM users WHERE user_id=%s", values=(call.from_user.id,),
+                     fetch='fetchone')
+
+    if data == 'menu':
+        await call.message.edit_text(text=dialogs.RU_ru['settings'].format(tg_promo=dialogs.RU_ru['marks'][tg],
+                                                                           sms_promo=dialogs.RU_ru['marks'][sms],
+                                                                           email_promo=dialogs.RU_ru['marks'][email]),
+                                     reply_markup=await settings_menu())
+    if data == 'tg_promo':
+        if tg:
+            db.query(query='UPDATE users SET tg_promo=FALSE WHERE user_id=%s', values=(call.from_user.id,))
+            await call.message.edit_text(text=dialogs.RU_ru['settings'].format(tg_promo=dialogs.RU_ru['marks'][False],
+                                                                               sms_promo=dialogs.RU_ru['marks'][sms],
+                                                                               email_promo=dialogs.RU_ru['marks'][
+                                                                                   email]),
+                                         reply_markup=await settings_menu())
+        else:
+            db.query(query='UPDATE users SET tg_promo=TRUE WHERE user_id=%s', values=(call.from_user.id,))
+            await call.message.edit_text(text=dialogs.RU_ru['settings'].format(tg_promo=dialogs.RU_ru['marks'][True],
+                                                                               sms_promo=dialogs.RU_ru['marks'][sms],
+                                                                               email_promo=dialogs.RU_ru['marks'][
+                                                                                   email]),
+                                         reply_markup=await settings_menu())
+    if data == 'sms_promo':
+        if sms:
+            db.query(query='UPDATE users SET sms_promo=FALSE WHERE user_id=%s', values=(call.from_user.id,))
+            await call.message.edit_text(text=dialogs.RU_ru['settings'].format(tg_promo=dialogs.RU_ru['marks'][tg],
+                                                                               sms_promo=dialogs.RU_ru['marks'][False],
+                                                                               email_promo=dialogs.RU_ru['marks'][
+                                                                                   email]),
+                                         reply_markup=await settings_menu())
+        else:
+            db.query(query='UPDATE users SET sms_promo=TRUE WHERE user_id=%s', values=(call.from_user.id,))
+            await call.message.edit_text(text=dialogs.RU_ru['settings'].format(tg_promo=dialogs.RU_ru['marks'][tg],
+                                                                               sms_promo=dialogs.RU_ru['marks'][True],
+                                                                               email_promo=dialogs.RU_ru['marks'][
+                                                                                   email]),
+                                         reply_markup=await settings_menu())
+    if data == 'email_promo':
+        if email:
+            db.query(query='UPDATE users SET email_promo=FALSE WHERE user_id=%s', values=(call.from_user.id,))
+            await call.message.edit_text(text=dialogs.RU_ru['settings'].format(tg_promo=dialogs.RU_ru['marks'][tg],
+                                                                               sms_promo=dialogs.RU_ru['marks'][sms],
+                                                                               email_promo=dialogs.RU_ru['marks'][
+                                                                                   False]),
+                                         reply_markup=await settings_menu())
+        else:
+            db.query(query='UPDATE users SET email_promo=TRUE WHERE user_id=%s', values=(call.from_user.id,))
+            await call.message.edit_text(text=dialogs.RU_ru['settings'].format(tg_promo=dialogs.RU_ru['marks'][tg],
+                                                                               sms_promo=dialogs.RU_ru['marks'][sms],
+                                                                               email_promo=dialogs.RU_ru['marks'][
+                                                                                   True]),
+                                         reply_markup=await settings_menu())
+
+    tg, sms, email = db.query(query="SELECT tg_promo, sms_promo, email_promo FROM users WHERE user_id=%s",
+                              values=(call.from_user.id,),
+                              fetch='fetchone')
+
+    if not tg and not sms and not email:
+        db.query(query='UPDATE customers SET receive_promo=FALSE WHERE user_id=%s', values=(call.from_user.id,))
+        await create_update_customer(call.from_user.id)
+    else:
+        db.query(query='UPDATE customers SET receive_promo=TRUE WHERE user_id=%s', values=(call.from_user.id,))
+        await create_update_customer(call.from_user.id)
+
+

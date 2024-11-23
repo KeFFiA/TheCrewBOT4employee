@@ -6,7 +6,6 @@ import config
 from Bot.Utils.logging_settings import database_logger
 from config import host, user, password, db_name, port
 
-
 class Database:
     def __init__(self, host, port, db_name, user, password):
         try:
@@ -279,14 +278,12 @@ create_customers_table = """
     )
 """
 
-# update_users_table = """
-#     ALTER TABLE users
-#     ADD COLUMN is_registered BOOLEAN DEFAULT FALSE,
-#     ADD COLUMN is_active BOOLEAN DEFAULT TRUE,
-#     ADD COLUMN is_employee BOOLEAN DEFAULT FALSE,
-#     ADD COLUMN is_admin BOOLEAN DEFAULT FALSE,
-#     ADD COLUMN is_superadmin BOOLEAN DEFAULT FALSE;
-#     """
+update_users_table = """
+    ALTER TABLE users
+    ADD COLUMN tg_promo BOOLEAN DEFAULT TRUE,
+    ADD COLUMN sms_promo BOOLEAN DEFAULT TRUE,
+    ADD COLUMN email_promo BOOLEAN DEFAULT TRUE;
+    """
 
 
 db.query(query=create_users_table)
