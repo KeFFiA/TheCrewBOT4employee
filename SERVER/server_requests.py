@@ -143,3 +143,12 @@ async def handle_validation(request) -> web.Response:
     else:
         server_logger.error(f'{file_path} not found')
         return web.Response(status=404, text='File not found')
+
+
+async def iiko_card_webhook(request) -> web.Response:
+    data = await request.json()
+    if data['subscriptionPassword'] == 'the-crew':
+        print(data)
+        return web.Response(status=200, text='ok')
+    else:
+        return web.Response(status=401, text='Invalid password')

@@ -6,6 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from API_SCRIPTS.iiko_cloudAPI import check_shift
 from Bot import dialogs
 from Database.database import db
+from Database.database_query import admins_lists, admin_list
 
 
 # from Database.database_query import white_list
@@ -205,13 +206,13 @@ async def settings_menu():
 
 
 async def admin_menu():
-    white_list_but = InlineKeyboardButton(callback_data='white_list', text=dialogs.RU_ru['navigation']['white_list'])
+    admin_list_but = InlineKeyboardButton(callback_data='admin_list', text=dialogs.RU_ru['navigation']['admin_list'])
     stop_list_but = InlineKeyboardButton(callback_data='stop_list', text=dialogs.RU_ru['navigation']['stop_list'])
 
     back = InlineKeyboardButton(callback_data='main_menu', text=dialogs.RU_ru['navigation']['menu'])
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [white_list_but],
+        [admin_list_but],
         [stop_list_but],
         [back]
     ])
@@ -219,26 +220,67 @@ async def admin_menu():
     return keyboard
 
 
-# async def create_white_list_keyboard():
-#     builder = InlineKeyboardBuilder()
-#     button = await white_list()
-#     buttons = []
-#     for data, text in button.items():
-#         try:
-#             buttons.append(InlineKeyboardButton(
-#                 text=text,
-#                 callback_data=data
-#             ))
-#         except:
-#             pass
-#
-#     builder.row(*buttons, width=1)
-#     last_btn_1 = InlineKeyboardButton(callback_data='next_page', text='-->')
-#     last_btn_2 = InlineKeyboardButton(callback_data='last_page', text='<--')
-#     last_btn_3 = InlineKeyboardButton(text=dialogs.RU_ru['navigation']['admin'], callback_data='admin')
-#     last_btns = InlineKeyboardMarkup(inline_keyboard=[[last_btn_2, last_btn_1], [last_btn_3]])
-#     builder.attach(InlineKeyboardBuilder.from_markup(last_btns))
-#     return builder.as_markup()
+async def create_admin_list_keyboard():
+    builder = InlineKeyboardBuilder()
+    button = await admin_list()
+    buttons = []
+    for data, text in button.items():
+        try:
+            buttons.append(InlineKeyboardButton(
+                text=text,
+                callback_data=data
+            ))
+        except:
+            pass
+
+    builder.row(*buttons, width=1)
+    # last_btn_1 = InlineKeyboardButton(callback_data='next_page', text='-->')
+    # last_btn_2 = InlineKeyboardButton(callback_data='last_page', text='<--')
+    last_btn_3 = InlineKeyboardButton(text=dialogs.RU_ru['navigation']['admin_menu'], callback_data='admin')
+    last_btns = InlineKeyboardMarkup(inline_keyboard=[[last_btn_3]])
+    builder.attach(InlineKeyboardBuilder.from_markup(last_btns))
+    return builder.as_markup()
+
+
+async def create_user_card_menu(user_id):
+    is_admin = db.query(query="SELECT is_admin FROM users WHERE user_id=%s",
+                        values=(user_id,), fetch='fetchone')[0]
+
+    is_smm = db.query(query="SELECT is_smm FROM users WHERE user_id=%s", values=(user_id,), fetch='fetchone')[0]
+
+    upgrade_user = InlineKeyboardButton(callback_data=f'white_btn_{user_id}_upgrade_to_admin',
+                                                   text=dialogs.RU_ru['navigation']['upgrade'])
+    downgrade_user = InlineKeyboardButton(callback_data=f'white_btn_{user_id}_downgrade_to_user',
+                                                     text=dialogs.RU_ru['navigation']['downgrade'])
+    back_user = InlineKeyboardButton(callback_data='admin_list',
+                                                text=dialogs.RU_ru['navigation']['back'])
+    acc_user = InlineKeyboardButton(url=f'tg://user?id={user_id}',
+                                               text=dialogs.RU_ru['navigation']['message'])
+    back_menu = InlineKeyboardButton(text=dialogs.RU_ru['navigation']['admin_menu'], callback_data='admin')
+
+    if is_smm:
+        smm = InlineKeyboardButton(callback_data=f'white_btn_{user_id}_downgrade_from_smm',
+                                   text=dialogs.RU_ru['navigation']['smm'])
+    else:
+        smm = InlineKeyboardButton(callback_data=f'white_btn_{user_id}_upgrade_to_smm',
+                                           text=dialogs.RU_ru['navigation']['smm'])
+
+    if is_admin:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [acc_user],
+            [downgrade_user, smm],
+            [back_user],
+            [back_menu]
+        ])
+    else:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [acc_user],
+            [upgrade_user, smm],
+            [back_user],
+            [back_menu]
+        ])
+
+    return keyboard
 
 
 async def create_choose_time_keyboard():

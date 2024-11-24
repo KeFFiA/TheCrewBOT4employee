@@ -280,9 +280,7 @@ create_customers_table = """
 
 update_users_table = """
     ALTER TABLE users
-    ADD COLUMN tg_promo BOOLEAN DEFAULT TRUE,
-    ADD COLUMN sms_promo BOOLEAN DEFAULT TRUE,
-    ADD COLUMN email_promo BOOLEAN DEFAULT TRUE;
+    ADD COLUMN is_smm BOOLEAN DEFAULT FALSE;
     """
 
 
