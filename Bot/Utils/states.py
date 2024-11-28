@@ -17,3 +17,7 @@ class Settings(StatesGroup):
 class WhiteList(StatesGroup):
     user = State()
     choose = State()
+
+
+class AdminFindUser(StatesGroup):
+    user = State()

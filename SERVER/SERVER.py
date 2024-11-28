@@ -15,7 +15,7 @@ app = web.Application()
 
 def start_server():
     try:
-        app.router.add_get(path='/privacy', handler=privacy)
+        app.router.add_get(path='/policy', handler=privacy)
         app.router.add_post(path=f"{config.path_webhook_iiko}", handler=iiko_webhook)
         app.router.add_post(path='/webhook/iiko-card/staff', handler=iiko_card_webhook)
         app.router.add_get(path='/', handler=index)

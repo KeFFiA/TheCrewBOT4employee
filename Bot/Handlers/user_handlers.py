@@ -5,7 +5,6 @@ from aiogram.filters import Command, CommandStart, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, BufferedInputFile
 
-from API_SCRIPTS.iikoAPI import employees_attendance
 from API_SCRIPTS.iiko_cloudAPI import create_update_customer
 from Bot import dialogs
 from Bot.Keyboards.inline_keyboards import create_menu_keyboard, create_register_menu, choose_sex_menu, \
@@ -13,7 +12,7 @@ from Bot.Keyboards.inline_keyboards import create_menu_keyboard, create_register
 from Bot.Keyboards.keyboards import send_contact
 from Bot.Utils.states import Register
 from Database.database import db
-from Scripts.scripts import generate_qr_card, find_referrer_name
+from Scripts.scripts import generate_qr_card, find_referrer_name, normalize_phone_number
 
 user_router = Router()
 
@@ -149,19 +148,27 @@ async def register_contact(message: Message, bot: Bot):
 
 
 @user_router.message(Register.step)
-async def register_step(message: Message, state: FSMContext):
+async def register_step_1(message: Message, state: FSMContext):
     date_pattern = re.compile(r'^\d{2}\.\d{2}\.\d{4}$')
+    phone_pattern = re.compile(r'^(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$')
     text = message.text.strip()
 
     if message.entities:
         email = [entity for entity in message.entities if entity.type == 'email']
+        phone = [entity for entity in message.entities if entity.type == 'phone_number']
         if email:
             _email = email[0].extract_from(message.text)
-            db.query(query="UPDATE customers SET email=%s WHERE user_id=%s", values=(_email, message.from_user.id))
+            db.query(query="UPDATE customers SET email = %s WHERE user_id=%s", values=(_email, message.from_user.id))
+        if phone:
+            _phone = await normalize_phone_number(phone[0].extract_from(message.text))
+            db.query(query="UPDATE customers SET phone = %s WHERE user_id=%s", values=(f'+{_phone}', message.from_user.id))
     elif date_pattern.match(text):
         birthday = text
-        db.query(query="UPDATE customers SET birthday=%s WHERE user_id=%s", values=(birthday, message.from_user.id))
-    else:
+        db.query(query="UPDATE customers SET birthday = %s WHERE user_id=%s", values=(birthday, message.from_user.id))
+    elif phone_pattern.match(text):
+        _phone = await normalize_phone_number(text)
+        db.query(query="UPDATE customers SET phone = %s WHERE user_id=%s", values=(f'+{_phone}', message.from_user.id))
+    elif not bool(message.entities) and not bool(date_pattern.match(text)) and not bool(phone_pattern.match(text)):
         text = text.split(" ", maxsplit=3)
         if len(text) == 3:
             surname = text[0]
@@ -173,6 +180,10 @@ async def register_step(message: Message, state: FSMContext):
             middlename = None
         db.query(query="UPDATE customers SET name=%s, surname=%s, middlename=%s WHERE user_id=%s",
                  values=(name, surname, middlename, message.from_user.id))
+    else:
+        await message.answer(text=dialogs.RU_ru['register']['not_found_match'].format(text=text))
+        await state.set_state(Register.step)
+        return
 
     result = db.query(query="""SELECT name, middlename, surname, birthday, sex, phone, email, referrer_id
                                                    FROM customers WHERE user_id=%s""", values=(message.from_user.id,),

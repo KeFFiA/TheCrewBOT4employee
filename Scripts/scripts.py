@@ -11,6 +11,7 @@ import pandas as pd
 
 
 from Bot import dialogs
+from Bot.Utils.logging_settings import iiko_api_logger
 from Database.database import db
 
 
@@ -142,17 +143,35 @@ async def find_referrer_name(guest_id):
 
 
 async def get_wallet_balance(user_info):
-    for wallet_info in user_info['wallets']:
-        if wallet_info['name'] == 'Питание персонала':
-            wallet = wallet_info['balance']
-            wallet_result = wallet - 15000
-            if wallet_result < 0:
-                wallet_result = wallet_result * -1
+    try:
+        for wallet_info in user_info['wallets']:
+            if wallet_info['name'] == 'STAFF':
+                wallet = wallet_info['balance']
+                wallet_result = wallet - 15000
+                if wallet_result < 0:
+                    wallet_result = wallet_result * -1
+                else:
+                    wallet_result = 0
+                return wallet_result
             else:
-                wallet_result = 0
-            return wallet_result
-        else:
-            return dialogs.RU_ru['error_wallet']
+                return dialogs.RU_ru['error_wallet']
+    except Exception as _ex:
+        iiko_api_logger.error(f'Get wallet[{user_info}] balance error: {_ex}', exc_info=_ex)
+        return 0
+
+
+async def normalize_phone_number(phone):
+    phone = ''.join(filter(str.isdigit, phone))
+
+    if phone.startswith('8'):
+        phone = '7' + phone[1:]
+    elif phone.startswith('+7'):
+        phone = '7' + phone[2:]
+    elif phone.startswith('7'):
+        phone = phone
+
+    return phone
+
 
 
 

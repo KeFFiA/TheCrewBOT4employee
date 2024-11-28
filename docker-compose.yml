@@ -24,7 +24,7 @@ services:
       - database
 
   samba:
-    image: keffia/samba_the_crew:1.1
+    image: keffia/samba_the_crew:latest
     ports:
       - "445:445"
     networks:

@@ -9,9 +9,6 @@ from Database.database import db
 from Database.database_query import admins_lists, admin_list
 
 
-# from Database.database_query import white_list
-
-
 async def create_menu_keyboard(user_id):
     settings = InlineKeyboardButton(callback_data='settings_menu', text=dialogs.RU_ru['navigation']['settings'])
     me = InlineKeyboardButton(callback_data='iiko_me', text=dialogs.RU_ru['navigation']['me'])
@@ -50,20 +47,30 @@ async def create_employee_menu(user_id):
     keyboard_main = InlineKeyboardMarkup(inline_keyboard=[[stats], [settings]])
     builder.attach(InlineKeyboardBuilder.from_markup(keyboard_main))
 
-    empl_id = db.query(query="SELECT emp_id FROM employee_list WHERE user_id=%s", values=(user_id,), fetch='fetchone')[0]
-    if db.query(query="SELECT employee_id FROM employee_couriers WHERE employee_id=%s", values=(empl_id,),
-                fetch='fetchone')[0] == empl_id:
+    empl_id = db.query(query="SELECT emp_id FROM employee_list WHERE user_id=%s", values=(user_id,), fetch='fetchone')
+    emlp_courier_id = db.query(query="SELECT employee_id FROM employee_couriers WHERE employee_id=%s", values=(empl_id,),
+                fetch='fetchone')
+    try:
+        if emlp_courier_id[0] == empl_id[0]:
 
-        if await check_shift(empl_id):
-            keyboard_attendance = InlineKeyboardMarkup(inline_keyboard=[[close], [menu]])
-        else:
-            keyboard_attendance = InlineKeyboardMarkup(inline_keyboard=[[open], [menu]])
+            if await check_shift(empl_id[0]):
+                keyboard_attendance = InlineKeyboardMarkup(inline_keyboard=[[close], [menu]])
+            else:
+                keyboard_attendance = InlineKeyboardMarkup(inline_keyboard=[[open], [menu]])
 
-        builder.attach(InlineKeyboardBuilder.from_markup(keyboard_attendance))
+            builder.attach(InlineKeyboardBuilder.from_markup(keyboard_attendance))
+    except:
+        keyboard_menu = InlineKeyboardMarkup(inline_keyboard=[[menu]])
+        builder.attach(InlineKeyboardBuilder.from_markup(keyboard_menu))
 
     return builder.as_markup()
 
 
+async def create_admin_back_menu():
+    menu = InlineKeyboardButton(callback_data='admin', text=dialogs.RU_ru['navigation']['admin_menu'])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[menu]])
+
+    return keyboard
 
 
 async def create_user_menu_me():
@@ -208,12 +215,14 @@ async def settings_menu():
 async def admin_menu():
     admin_list_but = InlineKeyboardButton(callback_data='admin_list', text=dialogs.RU_ru['navigation']['admin_list'])
     stop_list_but = InlineKeyboardButton(callback_data='stop_list', text=dialogs.RU_ru['navigation']['stop_list'])
+    find_user = InlineKeyboardButton(callback_data='find_user_admin', text=dialogs.RU_ru['navigation']['find_user'])
 
     back = InlineKeyboardButton(callback_data='main_menu', text=dialogs.RU_ru['navigation']['menu'])
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [admin_list_but],
         [stop_list_but],
+        [find_user],
         [back]
     ])
 
@@ -275,6 +284,43 @@ async def create_user_card_menu(user_id):
     else:
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [acc_user],
+            [upgrade_user, smm],
+            [back_user],
+            [back_menu]
+        ])
+
+    return keyboard
+
+
+async def create_user_card_menu_withuot_acc(user_id):
+    is_admin = db.query(query="SELECT is_admin FROM users WHERE user_id=%s",
+                        values=(user_id,), fetch='fetchone')[0]
+
+    is_smm = db.query(query="SELECT is_smm FROM users WHERE user_id=%s", values=(user_id,), fetch='fetchone')[0]
+
+    upgrade_user = InlineKeyboardButton(callback_data=f'white_btn_{user_id}_upgrade_to_admin',
+                                                   text=dialogs.RU_ru['navigation']['upgrade'])
+    downgrade_user = InlineKeyboardButton(callback_data=f'white_btn_{user_id}_downgrade_to_user',
+                                                     text=dialogs.RU_ru['navigation']['downgrade'])
+    back_user = InlineKeyboardButton(callback_data='admin_list',
+                                                text=dialogs.RU_ru['navigation']['back'])
+    back_menu = InlineKeyboardButton(text=dialogs.RU_ru['navigation']['admin_menu'], callback_data='admin')
+
+    if is_smm:
+        smm = InlineKeyboardButton(callback_data=f'white_btn_{user_id}_downgrade_from_smm',
+                                   text=dialogs.RU_ru['navigation']['smm'])
+    else:
+        smm = InlineKeyboardButton(callback_data=f'white_btn_{user_id}_upgrade_to_smm',
+                                           text=dialogs.RU_ru['navigation']['smm'])
+
+    if is_admin:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [downgrade_user, smm],
+            [back_user],
+            [back_menu]
+        ])
+    else:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [upgrade_user, smm],
             [back_user],
             [back_menu]

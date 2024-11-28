@@ -2,6 +2,7 @@
 
 import datetime
 import os
+from datetime import timedelta
 
 import pytz
 from aiohttp import web
@@ -61,13 +62,14 @@ async def iiko_webhook(request) -> web.Response:
                                             text=f'Not registered user with employee_id: {emp_id}')
                     try:
                         if event_info.get('opened'):
+                            _time_now = datetime.datetime.now(pytz.timezone('Europe/Moscow')) + timedelta(hours=3)
                             db.query(query="UPDATE employee_list SET time_opened=%s WHERE user_id=%s",
-                                     values=(datetime.datetime.now(pytz.timezone('Europe/Moscow')).strftime("%m/%d/%Y %H:%M:%S"), user_id))
+                                     values=(_time_now.strftime("%m/%d/%Y %H:%M:%S"), user_id))
                             if db.query(query="SELECT receive_upd_shift FROM employee_list WHERE user_id=%s",
                                         values=(user_id,), fetch='fetchone', log_level=30, debug=True)[0]:
                                 await bot.send_message(chat_id=user_id,
                                                        text=dialogs.RU_ru['server']['shift_open'].format(user_name,
-                                                                                                         datetime.datetime.now(pytz.timezone('Europe/Moscow')).strftime("%H:%M")),
+                                                                                                         _time_now.strftime("%H:%M")),
                                                        reply_markup=await create_menu_keyboard(user_id))
                             else:
                                 pass

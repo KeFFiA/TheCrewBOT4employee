@@ -399,14 +399,18 @@ async def create_update_customer(user_id):
                                     async with session_1.post(url=url_1, headers=token, json=params_1) as resp_1:
                                         if resp_1.status == 200:
                                             db.query(query='UPDATE customers SET category = %s WHERE user_id = %s',
-                                                     values=("STAFF", user_id))
+                                                     values=('STAFF', user_id))
                                             program_result = await add_customer_program(guest_id)
                                             if not program_result:
                                                 return False
                                         else:
                                             data_1 = await resp_1.json()
                                             if data_1['description'] == 'Category binded to another customer':
-                                                continue
+                                                db.query(query='UPDATE customers SET category = %s WHERE user_id = %s',
+                                                         values=('STAFF', user_id))
+                                                program_result = await add_customer_program(guest_id)
+                                                if not program_result:
+                                                    return False
                                             else:
                                                 iiko_cloud_api_logger.error(
                                                     f'Add STAFF category for [{user_id}] failed with error: {resp_1.status} | {await resp_1.text()}')
