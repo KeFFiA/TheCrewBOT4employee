@@ -23,8 +23,8 @@ def start_server():
     except Exception as _ex:
         servers_logger.exception(f"Adding router error: {_ex}")
     try:
-        web.run_app(app, host=config.host_web, port=config.port_web, ssl_context=ssl_context)
-        # web.run_app(app, host=config.host_web, port=config.port_web)
+        # web.run_app(app, host=config.host_web, port=config.port_web, ssl_context=ssl_context)
+        web.run_app(app, host=config.host_web, port=config.port_web)
         servers_logger.info("Server started successfully")
     except Exception as _ex:
         servers_logger.exception(f"Starting server error: {_ex}")

@@ -453,14 +453,12 @@ async def add_customer_program(guest_id):
                         params_1 = {
                             "customerId": guest_id,
                             "walletId": wallet_id,
-                            "sum": 15000,
+                            "sum": 5000,
                             "organizationId": org_id[0]
                         }
                         async with ClientSession() as session_1:
                             async with session_1.post(url=url_1, headers=token, json=params_1) as resp_1:
-                                if resp_1.status == 200:
-                                    return True
-                                else:
+                                if resp_1.status != 200:
                                     iiko_cloud_api_logger.error(f'Popup user [{guest_id}] wallet status error: {resp_1.status} | {await resp_1.text()}')
                                     return False
                     else:

@@ -1,10 +1,12 @@
 from typing import Any
 
 import psycopg2
+import asyncpg
 
 import config
 from Bot.Utils.logging_settings import database_logger
 from config import host, user, password, db_name, port
+
 
 class Database:
     def __init__(self, host, port, db_name, user, password):
@@ -25,21 +27,46 @@ class Database:
         except Exception as _ex:
             database_logger.critical(f'Can`t establish connection to DataBase with error: {_ex}')
 
+    msg = 'The sql query failed with an error'  # Default error query message, when DEBUG -> False
+    def execute_query(self, query: str, values: tuple, fetch: str = None, log_level: int = 40, msg: str = msg, debug: bool = config.debug) -> any or None:
+        try:
+            if values is None:
+                self.cursor.execute(query)
+            else:
+                self.cursor.execute(query, values)
+
+            if fetch == 'fetchone' or fetch == 'one':
+                return self.cursor.fetchone()
+            elif fetch == 'fetchall' or fetch == 'all':
+                return self.cursor.fetchall()
+            elif fetch == 'fetchmany' or fetch == 'many':
+                return self.cursor.fetchmany()
+            return None
+        except Exception as ex:
+            if debug:
+                database_logger.log(msg=ex, level=log_level)
+                self.rollback()
+                return None
+            else:
+                database_logger.log(msg=msg, level=log_level)
+                self.rollback()
+                return None
+
+    def commit(self):
+        self.connect.commit()
+
+    def rollback(self):
+        self.connect.rollback()
+
     def close(self):
         self.cursor.close()
         self.connect.close()
 
-    msg = f'The sql query failed with an error'  # Default error query message, when DEBUG -> False
-
-    def query(self, query: str, values: tuple = None, execute_many=False, fetch: str = None, size: int = None,
-              log_level: int = 40,
-              msg: str = msg, debug: bool = config.debug) -> Any:
+    def query(self, query: str, values: tuple = None, fetch: str = None, log_level: int = 40, msg: str = msg, debug: bool = config.debug) -> any:
         """
         :param query: takes sql query, for example: "SELECT * FROM table"
         :param values: takes tuple of values
-        :param execute_many: if True - change cursor *execute* to *execute_many*
         :param fetch: choose of one upper this list
-        :param size: count of fetching info from database. Default 10, JUST FOR fetchmany
         :param log_level: choose of logging level if needed. Default 40[ERROR]
         :param msg: message for logger
         :param debug: make Exception error message
@@ -58,51 +85,18 @@ class Database:
             5. 50 (Critical) - this level is used to display information about very serious errors, the presence of which threatens the normal functioning of the entire application. If you do not fix such an error, this may lead to the application ceasing to work.
         """
         try:
-            self.cursor.execute('SAVEPOINT point1')
-            if fetch == 'fetchone':
-                with self.connect.cursor() as cursor:
-                    if values is None:
-                        cursor.execute(query)
-                        return cursor.fetchone()
-                    else:
-                        cursor.execute(query, values)
-                        return cursor.fetchone()
-            elif fetch == 'fetchall':
-                with self.connect.cursor() as cursor:
-                    if values is None:
-                        cursor.execute(query)
-                        return cursor.fetchall()
-                    else:
-                        cursor.execute(query, values)
-                        return cursor.fetchall()
-            elif fetch == 'fetchmany':
-                with self.connect.cursor() as cursor:
-                    if values is None:
-                        cursor.execute(query)
-                        return cursor.fetchmany(size=size)
-                    else:
-                        cursor.execute(query, values)
-                        return cursor.fetchmany(size=size)
-            else:
-                with self.connect.cursor() as cursor:
-                    if values is None:
-                        cursor.execute(query)
-                    else:
-                        if execute_many:
-                            cursor.executemany(query, values)
-                        else:
-                            cursor.execute(query, values)
-            self.cursor.execute('RELEASE point1')
-            self.connect.commit()
-            return 'Success'
-        except Exception as _ex:
+            self.cursor.execute("SAVEPOINT point1")
+            result = self.execute_query(query, values, fetch, log_level=log_level)
+            self.commit()
+            return result
+        except Exception as ex:
             if debug:
-                database_logger.log(msg=_ex, level=log_level)
-                self.cursor.execute('ROLLBACK TO point1')
+                database_logger.log(msg=ex, level=log_level)
+                self.rollback()
                 return 'Error'
             else:
                 database_logger.log(msg=msg, level=log_level)
-                self.cursor.execute('ROLLBACK TO point1')
+                self.rollback()
                 return 'Error'
 
 
@@ -284,18 +278,18 @@ update_users_table = """
     """
 
 
-db.query(query=create_users_table)
-# db.query(query=update_users_table)
-db.query(query=create_white_list_table)
-db.query(query=create_tokens_table)
-db.query(query=create_employee_table)
-db.query(query=create_organizations_table)
-db.query(query=create_employee_couriers_table)
-db.query(query=create_stop_list_table)
-db.query(query=create_menu_table)
-db.query(query=create_iiko_login_table)
-db.query(query=create_employee_server_table)
-db.query(query=create_loyalty_program_table)
-db.query(query=create_loyalty_marketing_campaigns_table)
-db.query(query=create_customer_categories_table)
-db.query(query=create_customers_table)
+# db.query(query=create_users_table)
+# # db.query(query=update_users_table)
+# db.query(query=create_white_list_table)
+# db.query(query=create_tokens_table)
+# db.query(query=create_employee_table)
+# db.query(query=create_organizations_table)
+# db.query(query=create_employee_couriers_table)
+# db.query(query=create_stop_list_table)
+# db.query(query=create_menu_table)
+# db.query(query=create_iiko_login_table)
+# db.query(query=create_employee_server_table)
+# db.query(query=create_loyalty_program_table)
+# db.query(query=create_loyalty_marketing_campaigns_table)
+# db.query(query=create_customer_categories_table)
+# db.query(query=create_customers_table)

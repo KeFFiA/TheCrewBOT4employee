@@ -12,7 +12,7 @@ from Bot.Keyboards.inline_keyboards import create_menu_keyboard, create_register
 from Bot.Keyboards.keyboards import send_contact
 from Bot.Utils.states import Register
 from Database.database import db
-from Scripts.scripts import generate_qr_card, find_referrer_name, normalize_phone_number
+from Scripts.scripts import generate_qr_card, find_referrer_name, normalize_phone_number, find_similar_names
 
 user_router = Router()
 
@@ -169,15 +169,26 @@ async def register_step_1(message: Message, state: FSMContext):
         _phone = await normalize_phone_number(text)
         db.query(query="UPDATE customers SET phone = %s WHERE user_id=%s", values=(f'+{_phone}', message.from_user.id))
     elif not bool(message.entities) and not bool(date_pattern.match(text)) and not bool(phone_pattern.match(text)):
+        result = await find_similar_names(text)
         text = text.split(" ", maxsplit=3)
-        if len(text) == 3:
-            surname = text[0]
-            name = text[1]
-            middlename = text[2]
+        if result:
+            if len(text) == 3:
+                surname = result[0]
+                name = result[1]
+                middlename = text[2]
+            else:
+                surname = result[0]
+                name = result[1]
+                middlename = None
         else:
-            surname = text[0]
-            name = text[1]
-            middlename = None
+            if len(text) == 3:
+                surname = text[0]
+                name = text[1]
+                middlename = text[2]
+            else:
+                surname = text[0]
+                name = text[1]
+                middlename = None
         db.query(query="UPDATE customers SET name=%s, surname=%s, middlename=%s WHERE user_id=%s",
                  values=(name, surname, middlename, message.from_user.id))
     else:

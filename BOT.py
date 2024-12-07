@@ -11,6 +11,7 @@ from API_SCRIPTS.iikoAPI import bot, dp
 from API_SCRIPTS.iiko_cloudAPI import update_token
 from Bot.Handlers.admin_handlers import admin_router
 from Bot.Handlers.employee_handlers import employee_router
+from Bot.Handlers.smm_handlers import marketing_router
 from Bot.Handlers.user_handlers import user_router
 from Bot.Utils.logging_settings import bot_logger
 from Bot.Utils.middlewares import CheckInAdminListMiddleware, CheckInEmployeeListMiddleware
@@ -41,6 +42,7 @@ def main():
     dp.include_router(admin_router)
     dp.include_router(user_router)
     dp.include_router(employee_router)
+    dp.include_router(marketing_router)
 
     dp.message.middleware(ChatActionMiddleware())
 

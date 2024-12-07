@@ -61,15 +61,15 @@ async def iiko_webhook(request) -> web.Response:
                         return web.Response(status=406, reason='Not registered user',
                                             text=f'Not registered user with employee_id: {emp_id}')
                     try:
+                        _time_now_ = datetime.datetime.now(pytz.timezone('Europe/Moscow'))
                         if event_info.get('opened'):
-                            _time_now = datetime.datetime.now(pytz.timezone('Europe/Moscow')) + timedelta(hours=3)
-                            db.query(query="UPDATE employee_list SET time_opened=%s WHERE user_id=%s",
-                                     values=(_time_now.strftime("%m/%d/%Y %H:%M:%S"), user_id))
+                            db.query(query="UPDATE employee_list SET time_opened = %s WHERE user_id=%s",
+                                     values=(_time_now_.strftime("%m/%d/%Y %H:%M:%S"), user_id))
                             if db.query(query="SELECT receive_upd_shift FROM employee_list WHERE user_id=%s",
                                         values=(user_id,), fetch='fetchone', log_level=30, debug=True)[0]:
                                 await bot.send_message(chat_id=user_id,
                                                        text=dialogs.RU_ru['server']['shift_open'].format(user_name,
-                                                                                                         _time_now.strftime("%H:%M")),
+                                                                                                         _time_now_.strftime("%H:%M")),
                                                        reply_markup=await create_menu_keyboard(user_id))
                             else:
                                 pass
@@ -77,8 +77,9 @@ async def iiko_webhook(request) -> web.Response:
                             try:
                                 time_opened = db.query(query='SELECT time_opened FROM employee_list WHERE user_id=%s',
                                                        values=(user_id,), fetch='fetchone')[0]
-                                time_now = datetime.datetime.now(pytz.timezone('Europe/Moscow')).strftime("%m/%d/%Y %H:%M:%S")
-                                _time_now = datetime.datetime.strptime(time_now, '%m/%d/%Y %H:%M:%S')
+                                time_now = datetime.datetime.now(pytz.timezone('Europe/Moscow'))
+                                time_now_ = time_now.strftime("%m/%d/%Y %H:%M:%S")
+                                _time_now = datetime.datetime.strptime(time_now_, '%m/%d/%Y %H:%M:%S')
                                 delta = (_time_now - datetime.datetime.strptime(time_opened, '%m/%d/%Y %H:%M:%S')).total_seconds()
                                 delta = datetime.timedelta(seconds=delta)
                                 delta = f"{delta.seconds // 3600}:{(delta.seconds // 60) % 60:02}"
@@ -88,9 +89,10 @@ async def iiko_webhook(request) -> web.Response:
                                         values=(user_id,), fetch='fetchone', log_level=30, debug=True)[0]:
                                 db.query(query="UPDATE employee_list SET time_opened='' WHERE user_id=%s",
                                          values=(user_id,))
+                                time_now = datetime.datetime.now(pytz.timezone('Europe/Moscow')).strftime("%H:%M")
                                 await bot.send_message(chat_id=user_id,
                                                        text=dialogs.RU_ru['server']['shift_close'].format(user_name,
-                                                                                                          datetime.datetime.now().strftime("%H:%M"),
+                                                                                                          time_now,
                                                                                                           delta),
                                                        reply_markup=await create_menu_keyboard(user_id))
                             else:
@@ -110,7 +112,7 @@ async def iiko_webhook(request) -> web.Response:
                     new_items_text, already_stop_text = await stop_list_server()
                     if new_items_text and already_stop_text == 'Break':
                         return web.Response(status=204, reason='No changes', text='No changes from stop-list update')
-                    user_ids = db.query(query="SELECT user_id FROM users WHERE users.is_admin IS TRUE", fetch='fetchall',
+                    user_ids = db.query(query="SELECT user_id FROM users WHERE is_admin IS TRUE", fetch='fetchall',
                                         log_level=30, debug=True)
                     for user_id in user_ids:
                         try:

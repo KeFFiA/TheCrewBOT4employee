@@ -353,3 +353,66 @@ async def create_choose_time_keyboard():
             [back]
         ])
     return keyboard
+
+
+async def create_smm_keyboard():
+    create_mailing = InlineKeyboardButton(callback_data='mark_create_mailing', text=dialogs.RU_ru['navigation']['mailings'])
+    check_mailings = InlineKeyboardButton(callback_data='mark_check_mailing', text=dialogs.RU_ru['navigation']['check_mailings'])
+
+    back = InlineKeyboardButton(callback_data='main_menu', text=dialogs.RU_ru['navigation']['menu'])
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [create_mailing],
+        [check_mailings],
+        [back]
+    ])
+
+    return keyboard
+
+
+async def create_check_mailing_keyboard():
+    back = InlineKeyboardButton(callback_data='marketing_check_mailing', text=dialogs.RU_ru['navigation']['back'])
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [back],
+    ])
+    return keyboard
+
+
+async def create_mailing_keyboard():
+    momental = InlineKeyboardButton(callback_data='mailing_create_momental', text=dialogs.RU_ru['navigation']['momental'])
+    scheduler = InlineKeyboardButton(callback_data='mailing_create_scheduler', text=dialogs.RU_ru['navigation']['schedule_mail'])
+
+    back = InlineKeyboardButton(callback_data='marketing', text=dialogs.RU_ru['navigation']['back'])
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [momental],
+        [scheduler],
+        [back]
+    ])
+
+    return keyboard
+
+
+async def create_edit_message_keyboard(scheduler: bool = False):
+    name = InlineKeyboardButton(callback_data='mailing_edit_name', text=dialogs.RU_ru['navigation']['scheduler_name'])
+    header = InlineKeyboardButton(callback_data='mailing_edit_momental', text=dialogs.RU_ru['navigation']['header'])
+    body = InlineKeyboardButton(callback_data='mailing_edit_momental', text=dialogs.RU_ru['navigation']['body'])
+    footer = InlineKeyboardButton(callback_data='mailing_edit_momental', text=dialogs.RU_ru['navigation']['footer'])
+
+    if scheduler:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [name],
+            [header],
+            [body],
+            [footer],
+        ])
+    else:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [header],
+            [body],
+            [footer],
+        ])
+
+    return keyboard
+

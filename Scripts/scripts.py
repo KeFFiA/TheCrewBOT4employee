@@ -3,6 +3,7 @@ import io
 import random
 import string
 from datetime import datetime
+from fuzzywuzzy import process
 
 import qrcode
 
@@ -172,6 +173,15 @@ async def normalize_phone_number(phone):
 
     return phone
 
+async def find_similar_names(name, threshold=60):
+    names = db.query(query='SELECT name FROM employee_server', fetch='fetchall')
+    names_list = [name[0] for name in names]
+    similar_names = process.extract(name, names_list, limit=5, scorer=process.fuzz.token_sort_ratio)
+    result = [name for name, score in similar_names if score >= threshold]
+    if result:
+        return result
+    else:
+        return False
 
 
 
