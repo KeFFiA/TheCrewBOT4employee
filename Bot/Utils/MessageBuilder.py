@@ -5,30 +5,32 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 class MessageBuilder:
     def __init__(self):
         self.name = None
-        self.header = None
-        self.body = None
+        self.text = None
         self.footer = None
         self.hour = None
         self.minute = None
         self.day = None
         self.buttons = InlineKeyboardBuilder()
+        self.buttons_count = 0
         self.media = []
 
-    async def set_name(self, name: str):
+    async def set_name(self, text: str):
         """Add name to scheduler"""
-        self.name = name
+        self.name = text
+        return self.name
 
-    async def set_header(self, header: str):
-        """Add header."""
-        self.header = header
+    async def set_text(self, text: str):
+        """Add text."""
+        self.text = text
+        if self.media:
+            media = self.media[-1]
 
-    async def set_body(self, body: str):
-        """Add body."""
-        self.body = body
+        return self.footer
 
-    async def set_footer(self, footer: str):
+    async def set_footer(self, text: str):
         """Add footer."""
-        self.footer = footer
+        self.footer = text
+        return self.footer
 
     async def add_button(self, text: str, url: str = None, callback_data: str = None):
         """Add button (url or callback)."""
@@ -36,8 +38,10 @@ class MessageBuilder:
             self.buttons.add(InlineKeyboardButton(text=text, url=url))
         elif callback_data:
             self.buttons.add(InlineKeyboardButton(text=text, callback_data=callback_data))
+        self.buttons_count += 1
 
-    async def add_media(self, media_type: str, media: str, caption: str = None):
+
+    async def add_media(self, media_type: str, media: str):
         """
         Add media (photo, video).
 
@@ -46,13 +50,13 @@ class MessageBuilder:
         :param caption: Description for media(Optional).
         """
         if media_type == "photo":
-            self.media.append(InputMediaPhoto(media=media, caption=caption))
+            self.media.append(InputMediaPhoto(media=media, caption=self.text))
         elif media_type == "video":
-            self.media.append(InputMediaVideo(media=media, caption=caption))
+            self.media.append(InputMediaVideo(media=media, caption=self.text))
         else:
             raise ValueError("Unsupported media type. Use 'photo' or 'video'.")
 
-    async def add_scheduler(self, **kwargs: any):
+    async def set_scheduler(self, **kwargs: any):
         """Add scheduler.
         :param kwargs: Keyword arguments for scheduler. Must be any of: day, hour, minute.
         """
@@ -66,30 +70,64 @@ class MessageBuilder:
             elif key == "minute":
                 self.minute = kwargs['minute']
 
-    async def get_name(self):
-        """Return name."""
+    async def get_name(self) -> str|None:
+        """Return scheduler name."""
         return self.name
 
-    async def get_header(self):
-        """Return header."""
-        return self.header
+    async def get_text(self) -> str|None:
+        """Return text."""
+        return self.text
 
-    async def get_body(self):
-        """Return body."""
-        return self.body
-
-    async def get_footer(self):
+    async def get_footer(self) -> str|None:
         """Return footer."""
         return self.footer
 
-    async def build_message(self):
+    async def get_buttons(self):
+        """Return buttons."""
+        return self.buttons.as_markup()
+
+    async def get_buttons_len(self):
+        return self.buttons_count
+
+    async def get_media(self) -> list[str]:
+        """Return media."""
+        return self.media
+
+    async def get_scheduler(self) -> tuple:
+        """Return scheduler."""
+        return self.day, self.hour, self.minute
+
+    async def build_message(self) -> dict|str:
         """Build message like a dictionary."""
         parts = []
-        if self.header:
-            parts.append(self.header)
-        if self.body:
-            parts.append(self.body)
-        if self.footer:
-            parts.append(self.footer)
-        text = "\n\n".join(parts)
-        return {"text": text, "reply_markup": self.buttons, "media": self.media}
+        if self.text:
+            parts.append(self.text)
+            text = "".join(parts)
+            return {"text": text, "reply_markup": self.buttons, "media": self.media}
+        else:
+            return 'Error'
+
+    async def clear_media(self, media=None):
+        """Clear media.
+        :param media: Media id to clear."""
+        if media:
+            ...
+        else:
+            self.media = []
+
+    async def clear_buttons(self):
+        """Clear buttons."""
+        self.buttons = InlineKeyboardBuilder()
+
+    async def clear(self):
+        """Clear message."""
+        self.name = None
+        self.text = None
+        self.footer = None
+        self.media = None
+        self.buttons = InlineKeyboardBuilder()
+        self.hour = None
+        self.minute = None
+
+
+msg_builder = MessageBuilder()

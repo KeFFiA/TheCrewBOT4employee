@@ -80,7 +80,7 @@ async def get_date_range(data):
         if now.month == 1:
             date_from, date_to = now.replace(year=now.year - 1, month=12, day=15), now.replace(year=now.year - 1, month=12, day=31)
         else:
-            date_from = now.replace(month=now.month - 1, day=15)
+            date_from = now.replace(month=now.month - 1, day=16)
             date_to = now.replace(month=now.month - 1, day=1)
             date_to = date_to.replace(day=calendar.monthrange(date_from.year, date_to.month)[1])
 
@@ -184,5 +184,45 @@ async def find_similar_names(name, threshold=60):
         return False
 
 
+async def formatting_text(entities, message):
+    formatted_parts = []
+    last_offset = 0
+
+    entities.sort(key=lambda e: e.offset)
+
+    for entity in entities:
+        offset = entity.offset
+        length = entity.length
+        text_segment = message[offset:offset + length]
+
+        if last_offset < offset:
+            formatted_parts.append(message[last_offset:offset])
+
+        if entity.type == 'bold':
+            formatted_parts.append(f'<b>{text_segment}</b>')
+        elif entity.type == 'italic':
+            formatted_parts.append(f'<i>{text_segment}</i>')
+        elif entity.type == 'underline':
+            formatted_parts.append(f'<u>{text_segment}</u>')
+        elif entity.type == 'strikethrough':
+            formatted_parts.append(f'<s>{text_segment}</s>')
+        elif entity.type == 'code':
+            formatted_parts.append(f'<code>{text_segment}</code>')
+        elif entity.type == 'spoiler':
+            formatted_parts.append(f'<tg-spoiler>{text_segment}</tg-spoiler>')
+        elif entity.type == 'text_link':
+            formatted_parts.append(f'<a href="{entity.url}">{text_segment}</a>')
+        elif entity.type == 'pre':
+            formatted_parts.append(f'<pre>{text_segment}</pre>')
+        elif entity.type == 'blockquote':
+            formatted_parts.append(f'<blockquote>{text_segment}</blockquote>')
+
+        last_offset = offset + length
+
+    if last_offset < len(message):
+        formatted_parts.append(message[last_offset:])
+
+    formatted_text = ''.join(formatted_parts)
+    return formatted_text
 
 

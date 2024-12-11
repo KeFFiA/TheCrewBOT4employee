@@ -396,23 +396,46 @@ async def create_mailing_keyboard():
 
 async def create_edit_message_keyboard(scheduler: bool = False):
     name = InlineKeyboardButton(callback_data='mailing_edit_name', text=dialogs.RU_ru['navigation']['scheduler_name'])
-    header = InlineKeyboardButton(callback_data='mailing_edit_momental', text=dialogs.RU_ru['navigation']['header'])
-    body = InlineKeyboardButton(callback_data='mailing_edit_momental', text=dialogs.RU_ru['navigation']['body'])
-    footer = InlineKeyboardButton(callback_data='mailing_edit_momental', text=dialogs.RU_ru['navigation']['footer'])
+    text = InlineKeyboardButton(callback_data='mailing_edit_text', text=dialogs.RU_ru['navigation']['text'])
+    footer = InlineKeyboardButton(callback_data='mailing_edit_footer', text=dialogs.RU_ru['navigation']['footer'])
+    button = InlineKeyboardButton(callback_data='mailing_edit_button', text=dialogs.RU_ru['navigation']['add_button'])
+    del_button = InlineKeyboardButton(callback_data='mailing_edit_del_button', text=dialogs.RU_ru['navigation']['delete_button'])
+    media = InlineKeyboardButton(callback_data='mailing_edit_media', text=dialogs.RU_ru['navigation']['add_media'])
+    del_media = InlineKeyboardButton(callback_data='mailing_edit_del_media', text=dialogs.RU_ru['navigation']['delete_media'])
+    clear = InlineKeyboardButton(callback_data='mailin_edit_clear', text=dialogs.RU_ru['navigation']['clear'])
 
     if scheduler:
+        check = InlineKeyboardButton(callback_data='mailing_check_schedule', text=dialogs.RU_ru['navigation']['check_msg'])
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [name],
-            [header],
-            [body],
+            [name, button, media],
+            [text, del_button, del_media],
             [footer],
+            [check],
+            [clear]
         ])
     else:
+        check = InlineKeyboardButton(callback_data='mailing_check_momental', text=dialogs.RU_ru['navigation']['check_msg'])
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [header],
-            [body],
-            [footer],
+            [text, button, media],
+            [footer, del_button, del_media],
+            [check],
+            [clear]
         ])
 
     return keyboard
+
+
+async def create_back_apply_keyboard(scheduler: bool = False):
+    if scheduler:
+        back = InlineKeyboardButton(callback_data='mailing_create_schedule', text=dialogs.RU_ru['navigation']['back'])
+        post = InlineKeyboardButton(callback_data='mailing_post_schedule', text=dialogs.RU_ru['navigation']['post'])
+    else:
+        back = InlineKeyboardButton(callback_data='mailing_create_momental', text=dialogs.RU_ru['navigation']['back'])
+        post = InlineKeyboardButton(callback_data='mailing_post_momental', text=dialogs.RU_ru['navigation']['post'])
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[post], [back]])
+
+    return keyboard
+
+
 

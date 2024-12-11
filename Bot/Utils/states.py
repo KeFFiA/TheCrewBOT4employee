@@ -21,3 +21,6 @@ class WhiteList(StatesGroup):
 
 class AdminFindUser(StatesGroup):
     user = State()
+
+class MsgBuilder(StatesGroup):
+    edit = State()

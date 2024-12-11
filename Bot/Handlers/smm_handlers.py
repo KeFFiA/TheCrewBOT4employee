@@ -2,10 +2,14 @@ from aiogram import Router, F, Bot
 from aiogram.filters import Command, CommandStart, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, BufferedInputFile
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from Bot import dialogs
 from Bot.Keyboards.inline_keyboards import create_smm_keyboard, create_mailing_keyboard, create_check_mailing_keyboard, \
-    create_edit_message_keyboard
+    create_edit_message_keyboard, create_back_apply_keyboard
+from Bot.Utils.MessageBuilder import msg_builder
+from Bot.Utils.states import MsgBuilder
+from Scripts.scripts import formatting_text
 
 marketing_router = Router()
 
@@ -26,7 +30,7 @@ async def marketing_menu(call: CallbackQuery, state: FSMContext):
 
 @marketing_router.callback_query(F.data.startswith('mark_'))
 async def marketing_menu_2(call: CallbackQuery):
-    data = call.data.removesuffix('mark_')
+    data = call.data.removeprefix('mark_')
     if data == 'create_mailing':
         await call.message.edit_text(text=dialogs.RU_ru['marketing']['create_mailing'], reply_markup=await create_mailing_keyboard())
     if data == 'check_mailings':
@@ -34,31 +38,128 @@ async def marketing_menu_2(call: CallbackQuery):
 
 
 @marketing_router.callback_query(F.data.startswith('mailing_'))
-async def mailing_menu(call: CallbackQuery):
-    data = call.data.removesuffix('mailing_')
+async def mailing_menu(call: CallbackQuery, state: FSMContext):
+    data = call.data.removeprefix('mailing_')
     if data.startswith('create_'):
-        data = data.removesuffix('create_')
+        data = data.removeprefix('create_')
         if data == 'momental':
             await call.message.edit_text(text=dialogs.RU_ru['marketing']['mailing']['momental'].format(
-                header=' ',
-                body=' ',
-                footer=' '
+                name='',
+                time='',
+                text='',
+                footer='',
+                buttons=0,
+                media=0
             ), reply_markup=await create_edit_message_keyboard())
         if data == 'scheduler':
             await call.message.edit_text(text=dialogs.RU_ru['marketing']['mailing']['schedule'].format(
-                name=dialogs.RU_ru['empty'],
-                header=' ',
-                body=' ',
-                footer=' '
+                name='',
+                time='',
+                text='',
+                footer='',
+                buttons=0,
+                media=0
             ), reply_markup=await create_edit_message_keyboard(scheduler=True))
+    elif data.startswith('edit_'):
+        data = data.removeprefix('edit_')
+        await call.message.edit_text(text='Ввод:')
+        await state.set_data(data={'edit': data})
+        await state.set_state(MsgBuilder.edit)
     else:
-        data = data.removesuffix('check_')
+        data = data.removeprefix('check_')
         if data == 'momental':
-            ...
+            result = await msg_builder.build_message()
+            try:
+                _buttons = result.get('reply_markup', [])
+                buttons = _buttons.copy()
+            except:
+                buttons = InlineKeyboardBuilder()
+            buttons.attach(InlineKeyboardBuilder.from_markup(await create_back_apply_keyboard()))
+            keyboard = buttons.as_markup()
+            name = ''
+            time = ''
+            footer = ''
+            but_len = await msg_builder.get_buttons_len()
+            if result.get('media'):
+                print(result.get('media'))
+                await call.message.answer_media_group(media=result.get('media'), caption=result.get('text'), reply_markup=keyboard)
+            else:
+                await call.message.edit_text(text=dialogs.RU_ru['marketing']['mailing']['momental'].format(
+                    name=name if name else '',
+                    time=time if time else '',
+                    text=result['text'],
+                    footer=footer if footer else '',
+                    buttons=but_len,
+                    media=0
+                ), reply_markup=keyboard, parse_mode='HTML')
         if data == 'schedule':
             ...
 
 
 # STATES
 
+@marketing_router.message(MsgBuilder.edit)
+async def mailing_edit_step(message: Message, state: FSMContext):
+    _data = await state.get_data()
+    data = _data['edit']
+    if data == 'name':
+        await msg_builder.set_name(text=message.text)
+    if data == 'text':
+        if message.entities:
+            text = await formatting_text(message=message.text, entities=message.entities)
+            await msg_builder.set_text(text=text)
+        else:
+            await msg_builder.set_text(text=message.text)
+    if data == 'footer':
+        await msg_builder.set_footer(text=message.text)
+    if data == 'schedule':
+        await msg_builder.set_schedule(schedule=message.text)
+    if data == 'button':
+        text, url = message.text.split()
+        await msg_builder.add_button(text=text, url=url)
+    if data == 'del_button':
+        ...
+    if data == 'media':
+        if message.entities:
+            url_list = [entity for entity in message.entities if entity.type == 'url']
+            for url in url_list:
+                await msg_builder.add_media(media_type='video', media=url)
+        else:
+            for i, _ in message:
+                if i == 'photo' and _ is not None:
+                    await msg_builder.add_media(media_type='photo', media=message.photo[-1].file_id)
+                if i == 'video' and _ is not None:
+                    await msg_builder.add_media(media_type='video', media=message.video[-1].file_id)
 
+    if data == 'del_media':
+        ...
+    if data == 'clear':
+        await msg_builder.clear()
+    name = await msg_builder.get_name()
+    time = await msg_builder.get_scheduler()
+    text = await msg_builder.get_text()
+    footer = await msg_builder.get_footer()
+    buttons = await msg_builder.get_buttons_len()
+    media = await msg_builder.get_media()
+    schedule = ''
+    for i in time:
+        if i is None:
+            schedule += ''
+        else:
+            schedule += '{i} '
+    if name:
+        print(True)
+        _ = 'schedule'
+    else:
+        print(False)
+        _ = 'momental'
+
+    await message.answer(text=dialogs.RU_ru['marketing']['mailing'][_].format(
+        name=name if name else '',
+        time=schedule if schedule else '',
+        text=text if text else '',
+        footer=footer if footer else '',
+        buttons=buttons,
+        media=len(media)
+    ), reply_markup=await create_edit_message_keyboard(), parse_mode='HTML')
+    await state.clear()
