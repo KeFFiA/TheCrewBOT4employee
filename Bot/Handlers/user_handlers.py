@@ -172,13 +172,14 @@ async def register_step_1(message: Message, state: FSMContext):
         result = await find_similar_names(text)
         text = text.split(" ", maxsplit=3)
         if result:
+            full_name = result[0]
             if len(text) == 3:
-                surname = result[0]
-                name = result[1]
-                middlename = text[2]
+                surname = full_name[0]
+                name = full_name[1]
+                middlename = full_name[2] or text[2]
             else:
-                surname = result[0]
-                name = result[1]
+                surname = full_name[0]
+                name = full_name[1]
                 middlename = None
         else:
             if len(text) == 3:

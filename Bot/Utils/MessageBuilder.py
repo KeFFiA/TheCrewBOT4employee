@@ -22,10 +22,7 @@ class MessageBuilder:
     async def set_text(self, text: str):
         """Add text."""
         self.text = text
-        if self.media:
-            media = self.media[-1]
-
-        return self.footer
+        return self.text
 
     async def set_footer(self, text: str):
         """Add footer."""
@@ -47,12 +44,11 @@ class MessageBuilder:
 
         :param media_type: Type of media ("photo" or "video").
         :param media: URL or file_id of media.
-        :param caption: Description for media(Optional).
         """
         if media_type == "photo":
-            self.media.append(InputMediaPhoto(media=media, caption=self.text))
+            self.media.append(InputMediaPhoto(media=media))
         elif media_type == "video":
-            self.media.append(InputMediaVideo(media=media, caption=self.text))
+            self.media.append(InputMediaVideo(media=media))
         else:
             raise ValueError("Unsupported media type. Use 'photo' or 'video'.")
 

@@ -1,7 +1,6 @@
 from typing import Any
 
 import psycopg2
-import asyncpg
 
 import config
 from Bot.Utils.logging_settings import database_logger

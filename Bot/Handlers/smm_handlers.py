@@ -81,8 +81,8 @@ async def mailing_menu(call: CallbackQuery, state: FSMContext):
             footer = ''
             but_len = await msg_builder.get_buttons_len()
             if result.get('media'):
-                print(result.get('media'))
-                await call.message.answer_media_group(media=result.get('media'), caption=result.get('text'), reply_markup=keyboard)
+                await call.message.answer_media_group(media=result.get('media'))
+                await call.message.answer(text=result.get('text'), reply_markup=keyboard)
             else:
                 await call.message.edit_text(text=dialogs.RU_ru['marketing']['mailing']['momental'].format(
                     name=name if name else '',
