@@ -6,9 +6,10 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from Bot import dialogs
 from Bot.Keyboards.inline_keyboards import create_smm_keyboard, create_mailing_keyboard, create_check_mailing_keyboard, \
-    create_edit_message_keyboard, create_back_apply_keyboard
+    create_edit_message_keyboard, create_back_apply_keyboard, create_footer_keyboard
 from Bot.Utils.MessageBuilder import msg_builder
 from Bot.Utils.states import MsgBuilder
+from Database.database import db
 from Scripts.scripts import formatting_text
 
 marketing_router = Router()
@@ -62,9 +63,21 @@ async def mailing_menu(call: CallbackQuery, state: FSMContext):
             ), reply_markup=await create_edit_message_keyboard(scheduler=True))
     elif data.startswith('edit_'):
         data = data.removeprefix('edit_')
-        await call.message.edit_text(text='Ввод:')
-        await state.set_data(data={'edit': data})
-        await state.set_state(MsgBuilder.edit)
+        print(data)
+        if data.startswith('footer'):
+            data = data.removeprefix('footer')
+            if data == '_farina' or data == '_mad' or data == '_cheb' or data == '_thecrew':
+                data = 'footer'.join(data)
+                await state.set_data(data={'edit': data})
+                await state.set_state(MsgBuilder.edit)
+            else:
+                await call.message.edit_text(text='Выберите готовый или введите свой', reply_markup=await create_footer_keyboard())  # TODO: Исправить на диалоги
+                await state.set_data(data={'edit': 'footer'})
+                await state.set_state(MsgBuilder.edit)
+        else:
+            await call.message.edit_text(text='Ввод:') # TODO: Исправить на диалоги
+            await state.set_data(data={'edit': data})
+            await state.set_state(MsgBuilder.edit)
     else:
         data = data.removeprefix('check_')
         if data == 'momental':
@@ -110,8 +123,21 @@ async def mailing_edit_step(message: Message, state: FSMContext):
             await msg_builder.set_text(text=text)
         else:
             await msg_builder.set_text(text=message.text)
-    if data == 'footer':
-        await msg_builder.set_footer(text=message.text)
+    if data.startswith('footer'):
+        print(data)
+        data = data.removeprefix('footer')
+        if data == 'footer':
+            text = message.text
+        else:
+            text = db.query(query='SELECT text FROM ')
+        # elif data == 'mad':
+        #     ...
+        # elif data == 'cheb':
+        #     ...
+        # elif data == 'thecrew':
+        #     ...
+        # else:
+        #     await msg_builder.set_footer(text=message.text)
     if data == 'schedule':
         await msg_builder.set_schedule(schedule=message.text)
     if data == 'button':

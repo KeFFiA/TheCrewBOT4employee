@@ -1,4 +1,5 @@
 import re
+from token import AWAIT
 
 from aiogram import Router, F, Bot
 from aiogram.filters import Command, CommandStart, CommandObject
@@ -145,99 +146,6 @@ async def register_contact(message: Message, bot: Bot):
                                                                             referrer=referrer_name,
                                                                             phone=phone, email=email, promo=_promo),
                              reply_markup=await create_register_menu())
-
-
-@user_router.message(Register.step)
-async def register_step_1(message: Message, state: FSMContext):
-    date_pattern = re.compile(r'^\d{2}\.\d{2}\.\d{4}$')
-    phone_pattern = re.compile(r'^(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$')
-    text = message.text.strip()
-
-    if message.entities:
-        email = [entity for entity in message.entities if entity.type == 'email']
-        phone = [entity for entity in message.entities if entity.type == 'phone_number']
-        if email:
-            _email = email[0].extract_from(message.text)
-            db.query(query="UPDATE customers SET email = %s WHERE user_id=%s", values=(_email, message.from_user.id))
-        if phone:
-            _phone = await normalize_phone_number(phone[0].extract_from(message.text))
-            db.query(query="UPDATE customers SET phone = %s WHERE user_id=%s", values=(f'+{_phone}', message.from_user.id))
-    elif date_pattern.match(text):
-        birthday = text
-        db.query(query="UPDATE customers SET birthday = %s WHERE user_id=%s", values=(birthday, message.from_user.id))
-    elif phone_pattern.match(text):
-        _phone = await normalize_phone_number(text)
-        db.query(query="UPDATE customers SET phone = %s WHERE user_id=%s", values=(f'+{_phone}', message.from_user.id))
-    elif not bool(message.entities) and not bool(date_pattern.match(text)) and not bool(phone_pattern.match(text)):
-        result = await find_similar_names(text)
-        text = text.split(" ", maxsplit=3)
-        if result:
-            full_name = result[0]
-            if len(text) == 3:
-                surname = full_name[0]
-                name = full_name[1]
-                middlename = full_name[2] or text[2]
-            else:
-                surname = full_name[0]
-                name = full_name[1]
-                middlename = None
-        else:
-            if len(text) == 3:
-                surname = text[0]
-                name = text[1]
-                middlename = text[2]
-            else:
-                surname = text[0]
-                name = text[1]
-                middlename = None
-        db.query(query="UPDATE customers SET name=%s, surname=%s, middlename=%s WHERE user_id=%s",
-                 values=(name, surname, middlename, message.from_user.id))
-    else:
-        await message.answer(text=dialogs.RU_ru['register']['not_found_match'].format(text=text))
-        await state.set_state(Register.step)
-        return
-
-    result = db.query(query="""SELECT name, middlename, surname, birthday, sex, phone, email, referrer_id
-                                                   FROM customers WHERE user_id=%s""", values=(message.from_user.id,),
-                      fetch='fetchone')
-    if result:
-        sex_list = [dialogs.RU_ru['navigation']['not_match'], dialogs.RU_ru['navigation']['male'],
-                    dialogs.RU_ru['navigation']['female']]
-
-        name, middlename, surname, birthday, sex, phone, email, referrer_id = (
-            value if value is not None else dialogs.RU_ru['empty'] for value in result
-        )
-        promo = db.query("SELECT receive_promo FROM customers WHERE user_id=%s",
-                         values=(message.from_user.id,), fetch='fetchone')[0]
-
-        if promo == 'true':
-            _promo = '✅'
-        else:
-            _promo = '❌'
-
-        if referrer_id is not None:
-            referrer_name = await find_referrer_name(referrer_id)
-        else:
-            referrer_name = dialogs.RU_ru['empty']
-
-        if middlename is not None:
-            _name = f'{surname} {name} {middlename}'
-        else:
-            _name = f'{surname} {name}'
-
-        try:
-            _sex = sex_list[int(sex)]
-        except:
-            _sex = sex_list[0]
-
-        await message.answer(text=dialogs.RU_ru['register']['start'].format(us_name=message.from_user.first_name,
-                                                                            name=_name, birthday=birthday,
-                                                                            sex=_sex,
-                                                                            referrer=referrer_name,
-                                                                            phone=phone, email=email, promo=_promo),
-                             reply_markup=await create_register_menu())
-
-    await state.clear()
 
 
 # CALLBACKS
@@ -551,5 +459,134 @@ async def settings_menus(call: CallbackQuery):
     else:
         db.query(query='UPDATE customers SET receive_promo=TRUE WHERE user_id=%s', values=(call.from_user.id,))
         await create_update_customer(call.from_user.id)
+
+
+# STATES
+
+@user_router.message(Register.step)
+async def register_step_1(message: Message, state: FSMContext):
+    date_pattern = re.compile(r'^\d{2}\.\d{2}\.\d{4}$')
+    phone_pattern = re.compile(r'^(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$')
+    text = message.text.strip()
+
+    if message.entities:
+        email = [entity for entity in message.entities if entity.type == 'email']
+        phone = [entity for entity in message.entities if entity.type == 'phone_number']
+        if email:
+            _email = email[0].extract_from(message.text)
+            db.query(query="UPDATE customers SET email = %s WHERE user_id=%s", values=(_email, message.from_user.id))
+        if phone:
+            _phone = await normalize_phone_number(phone[0].extract_from(message.text))
+            db.query(query="UPDATE customers SET phone = %s WHERE user_id=%s", values=(f'+{_phone}', message.from_user.id))
+    elif date_pattern.match(text):
+        birthday = text
+        db.query(query="UPDATE customers SET birthday = %s WHERE user_id=%s", values=(birthday, message.from_user.id))
+    elif phone_pattern.match(text):
+        _phone = await normalize_phone_number(text)
+        db.query(query="UPDATE customers SET phone = %s WHERE user_id=%s", values=(f'+{_phone}', message.from_user.id))
+    elif not bool(message.entities) and not bool(date_pattern.match(text)) and not bool(phone_pattern.match(text)):
+        result = await find_similar_names(text)
+        result_test = result[0].split()
+        user_id_test = db.query(query='SELECT user_id FROM customers WHERE surname = %s AND name = %s', values=(result_test[0], result_test[1]), fetch='one')[0]
+        if not user_id_test:
+            if result:
+                full_name = result[0].split(" ", maxsplit=3)
+                if len(text) == 3:
+                    surname = full_name[0]
+                    name = full_name[1]
+                    middlename = full_name[2] or text[2]
+                else:
+                    surname = full_name[0]
+                    name = full_name[1]
+                    middlename = None
+            else:
+                text = text.split(" ", maxsplit=3)
+                if len(text) == 3:
+                    surname = text[0]
+                    name = text[1]
+                    middlename = text[2]
+                else:
+                    surname = text[0]
+                    name = text[1]
+                    middlename = None
+        elif user_id_test != message.from_user.id:
+            text = text.split(" ", maxsplit=3)
+            if len(text) == 3:
+                surname = text[0]
+                name = text[1]
+                middlename = text[2]
+            else:
+                surname = text[0]
+                name = text[1]
+                middlename = None
+        else:
+            full_name = result[0].split(" ", maxsplit=3)
+            if len(text) == 3:
+                surname = full_name[0]
+                name = full_name[1]
+                middlename = full_name[2] or text[2]
+            else:
+                surname = full_name[0]
+                name = full_name[1]
+                middlename = None
+        db.query(query="UPDATE customers SET name=%s, surname=%s, middlename=%s WHERE user_id=%s",
+                 values=(name, surname, middlename, message.from_user.id))
+    else:
+        await message.answer(text=dialogs.RU_ru['register']['not_found_match'].format(text=text))
+        await state.set_state(Register.step)
+        return
+
+    result = db.query(query="""SELECT name, middlename, surname, birthday, sex, phone, email, referrer_id
+                                                   FROM customers WHERE user_id=%s""", values=(message.from_user.id,),
+                      fetch='fetchone')
+    if result:
+        sex_list = [dialogs.RU_ru['navigation']['not_match'], dialogs.RU_ru['navigation']['male'],
+                    dialogs.RU_ru['navigation']['female']]
+
+        name, middlename, surname, birthday, sex, phone, email, referrer_id = (
+            value if value is not None else dialogs.RU_ru['empty'] for value in result
+        )
+        promo = db.query("SELECT receive_promo FROM customers WHERE user_id=%s",
+                         values=(message.from_user.id,), fetch='fetchone')[0]
+
+        if promo == 'true':
+            _promo = '✅'
+        else:
+            _promo = '❌'
+
+        if referrer_id is not None:
+            referrer_name = await find_referrer_name(referrer_id)
+        else:
+            referrer_name = dialogs.RU_ru['empty']
+
+        if middlename is not None:
+            _name = f'{surname} {name} {middlename}'
+        else:
+            _name = f'{surname} {name}'
+
+        try:
+            _sex = sex_list[int(sex)]
+        except:
+            _sex = sex_list[0]
+
+        await message.answer(text=dialogs.RU_ru['register']['start'].format(us_name=message.from_user.first_name,
+                                                                            name=_name, birthday=birthday,
+                                                                            sex=_sex,
+                                                                            referrer=referrer_name,
+                                                                            phone=phone, email=email, promo=_promo),
+                             reply_markup=await create_register_menu())
+
+    await state.clear()
+
+
+# @user_router.message(Register.name)
+# async def register_step_name(message: Message, state: FSMContext):
+#     data = await state.get_data()
+#     result = data['names']
+#     await message.answer(text=dialogs.RU_ru['register']['names_found'].format(name=data))
+
+
+
+
 
 

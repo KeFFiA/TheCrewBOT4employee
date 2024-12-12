@@ -321,7 +321,6 @@ async def create_update_customer(user_id):
                 card_track, card_number = await generate_card(user_id)
             else:
                 card_check = True
-
             org_ids = db.query(query="SELECT org_id FROM organizations", fetch='fetchall')
             for org_id in org_ids:
                 if card_check:
@@ -330,6 +329,8 @@ async def create_update_customer(user_id):
                         'organizationId': org_id[0],
                         'phone': phone,
                         'name': name,
+                        'cardTrack': card_track,
+                        'cardNumber': card_number,
                         'middleName': middle_name,
                         'surName': surname,
                         'birthday': f'{datetime.strptime(birthday, "%d.%m.%Y").strftime("%Y-%m-%d 00:00:00.000")}',
@@ -358,7 +359,6 @@ async def create_update_customer(user_id):
                         'shouldReceivePromoActionsInfo': promo,
                         'userData': comment
                     }
-
                 async with ClientSession() as session:
                     async with session.post(url=url, headers=token, json=params) as resp:
                         if resp.status == 200:
@@ -402,6 +402,7 @@ async def create_update_customer(user_id):
                                                      values=('STAFF', user_id))
                                             program_result = await add_customer_program(guest_id)
                                             if not program_result:
+                                                iiko_cloud_api_logger.error(f'Error adding program user_id: {user_id} | error: {program_result}')
                                                 return False
                                         else:
                                             data_1 = await resp_1.json()
@@ -410,6 +411,8 @@ async def create_update_customer(user_id):
                                                          values=('STAFF', user_id))
                                                 program_result = await add_customer_program(guest_id)
                                                 if not program_result:
+                                                    iiko_cloud_api_logger.error(
+                                                        f'Error adding program user_id: {user_id} | error: {program_result}')
                                                     return False
                                             else:
                                                 iiko_cloud_api_logger.error(
@@ -463,7 +466,7 @@ async def add_customer_program(guest_id):
                                     return False
                     else:
                         iiko_cloud_api_logger.error(f'Add customer to program status error: {resp.status} | {await resp.text()}')
-
+        return True
     except Exception as _ex:
         iiko_cloud_api_logger.critical(f'Add customer to program failed with error: \n{_ex}')
 

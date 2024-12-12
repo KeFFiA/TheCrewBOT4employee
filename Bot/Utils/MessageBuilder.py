@@ -96,6 +96,8 @@ class MessageBuilder:
     async def build_message(self) -> dict|str:
         """Build message like a dictionary."""
         parts = []
+        if self.footer:
+            parts.append(self.footer)
         if self.text:
             parts.append(self.text)
             text = "".join(parts)

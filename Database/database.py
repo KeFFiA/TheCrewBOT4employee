@@ -260,25 +260,28 @@ create_customers_table = """
         middlename TEXT DEFAULT NULL,
         surname TEXT DEFAULT NULL,
         birthday TEXT DEFAULT NULL,
-        sex TEXT DEFAULT NULL,
+        sex TEXT DEFAULT '0',
         phone TEXT DEFAULT NULL,
         email TEXT DEFAULT NULL,
         referrer_id TEXT DEFAULT NULL,
         receive_promo TEXT DEFAULT TRUE,
-        consent_status TEXT DEFAULT 0,
+        consent_status TEXT DEFAULT '0',
         comment TEXT DEFAULT NULL,
         category TEXT DEFAULT NULL
     )
 """
 
-update_users_table = """
-    ALTER TABLE users
-    ADD COLUMN is_smm BOOLEAN DEFAULT FALSE;
-    """
+
+create_defaults_texts_table = """
+    CREATE TABLE IF NOT EXISTS defaults_texts (
+        type TEXT DEFAULT NULL,
+        name TEXT DEFAULT NULL,
+        text TEXT DEFAULT NULL 
+    )
+"""
 
 
 # db.query(query=create_users_table)
-# # db.query(query=update_users_table)
 # db.query(query=create_white_list_table)
 # db.query(query=create_tokens_table)
 # db.query(query=create_employee_table)

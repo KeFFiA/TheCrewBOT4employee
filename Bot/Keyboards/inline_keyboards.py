@@ -6,7 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from API_SCRIPTS.iiko_cloudAPI import check_shift
 from Bot import dialogs
 from Database.database import db
-from Database.database_query import admins_lists, admin_list
+from Database.database_query import admin_list
 
 
 async def create_menu_keyboard(user_id):
@@ -438,4 +438,16 @@ async def create_back_apply_keyboard(scheduler: bool = False):
     return keyboard
 
 
+async def create_footer_keyboard():
+    farina = InlineKeyboardButton(callback_data='mailing_edit_footer_farina', text=dialogs.RU_ru['navigation']['footer_farina'])
+    mad = InlineKeyboardButton(callback_data='mailing_edit_footer_mad', text=dialogs.RU_ru['navigation']['footer_mad'])
+    cheb = InlineKeyboardButton(callback_data='mailing_edit_footer_cheb', text=dialogs.RU_ru['navigation']['footer_cheb'])
+    thecrew = InlineKeyboardButton(callback_data='mailing_edit_footer_thecrew', text=dialogs.RU_ru['navigation']['footer_thecrew'])
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [farina, mad, cheb],
+        [thecrew],
+    ])
+
+    return keyboard
 
