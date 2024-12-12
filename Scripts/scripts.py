@@ -173,7 +173,7 @@ async def normalize_phone_number(phone):
 
     return phone
 
-def find_similar_names(name, threshold=60):
+async def find_similar_names(name, threshold=60):
     names = db.query(query='SELECT name FROM employee_server', fetch='fetchall')
     names_list = [name[0] for name in names]
     similar_names = process.extract(name, names_list, limit=5, scorer=process.fuzz.token_sort_ratio)
