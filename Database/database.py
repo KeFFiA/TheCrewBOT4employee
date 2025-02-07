@@ -281,6 +281,7 @@ create_defaults_texts_table = """
 """
 
 
+# db.query(query=create_defaults_texts_table)
 # db.query(query=create_users_table)
 # db.query(query=create_white_list_table)
 # db.query(query=create_tokens_table)

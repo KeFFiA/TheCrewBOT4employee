@@ -35,18 +35,20 @@ async def telegram_webhook(request) -> web.Response:
 
 async def iiko_webhook(request) -> web.Response:
     try:
+        print('get webhook')
         data = await request.json()
         req_token = request.headers.get('Authorization')
         tokens = db.query(query="SELECT token_cloud_endpont FROM tokens", fetch='fetchall')
         for token in tokens:
             if req_token in token:
                 req_token = True
-        if req_token is True or req_token is None:
+        if req_token or req_token is None:
             if isinstance(data, list):
                 data = data[0]
             event_type = data.get("eventType")
             event_info = data.get("eventInfo")
             if event_type == "PersonalShift":
+                print('shift')
                 emp_id = event_info.get("id")
                 if emp_id:
                     try:
@@ -108,6 +110,7 @@ async def iiko_webhook(request) -> web.Response:
                                         text="EmployeeID not found from webhook data")
 
             if event_type == 'StopListUpdate':
+                print('stoplist')
                 try:
                     new_items_text, already_stop_text = await stop_list_server()
                     if new_items_text and already_stop_text == 'Break':

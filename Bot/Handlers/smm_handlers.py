@@ -1,7 +1,7 @@
-from aiogram import Router, F, Bot
-from aiogram.filters import Command, CommandStart, CommandObject
+from aiogram import Router, F
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, BufferedInputFile
+from aiogram.types import Message, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from Bot import dialogs
@@ -63,17 +63,43 @@ async def mailing_menu(call: CallbackQuery, state: FSMContext):
             ), reply_markup=await create_edit_message_keyboard(scheduler=True))
     elif data.startswith('edit_'):
         data = data.removeprefix('edit_')
-        print(data)
         if data.startswith('footer'):
             data = data.removeprefix('footer')
             if data == '_farina' or data == '_mad' or data == '_cheb' or data == '_thecrew':
-                data = 'footer'.join(data)
-                await state.set_data(data={'edit': data})
-                await state.set_state(MsgBuilder.edit)
+                text = db.query(query='SELECT text FROM defaults_texts WHERE name = %s', values=(data,), fetch='one')[0]
+                await msg_builder.set_footer(text=text)
+                name = await msg_builder.get_name()
+                time = await msg_builder.get_scheduler()
+                text = await msg_builder.get_text()
+                footer = await msg_builder.get_footer()
+                buttons = await msg_builder.get_buttons_len()
+                media = await msg_builder.get_media()
+                schedule = ''
+                for i in time:
+                    if i is None:
+                        schedule += ''
+                    else:
+                        schedule += '{i} '
+                if name:
+                    print(True)
+                    _ = 'schedule'
+                else:
+                    print(False)
+                    _ = 'momental'
+                try:
+                    await call.message.edit_text(text=dialogs.RU_ru['marketing']['mailing'][_].format(
+                        name=name if name else '',
+                        time=schedule if schedule else '',
+                        text=text if text else '',
+                        footer=footer if footer else '',
+                        buttons=buttons,
+                        media=len(media)
+                    ), reply_markup=await create_edit_message_keyboard(), parse_mode='HTML')
+                except:
+                    pass
+                await state.clear()
             else:
                 await call.message.edit_text(text='Выберите готовый или введите свой', reply_markup=await create_footer_keyboard())  # TODO: Исправить на диалоги
-                await state.set_data(data={'edit': 'footer'})
-                await state.set_state(MsgBuilder.edit)
         else:
             await call.message.edit_text(text='Ввод:') # TODO: Исправить на диалоги
             await state.set_data(data={'edit': data})
@@ -123,28 +149,15 @@ async def mailing_edit_step(message: Message, state: FSMContext):
             await msg_builder.set_text(text=text)
         else:
             await msg_builder.set_text(text=message.text)
-    if data.startswith('footer'):
-        print(data)
-        data = data.removeprefix('footer')
-        if data == 'footer':
-            text = message.text
-        else:
-            text = db.query(query='SELECT text FROM ')
-        # elif data == 'mad':
-        #     ...
-        # elif data == 'cheb':
-        #     ...
-        # elif data == 'thecrew':
-        #     ...
-        # else:
-        #     await msg_builder.set_footer(text=message.text)
+    if data == 'footer':
+        await msg_builder.set_footer(text=message.text)
     if data == 'schedule':
         await msg_builder.set_schedule(schedule=message.text)
     if data == 'button':
         text, url = message.text.split()
         await msg_builder.add_button(text=text, url=url)
     if data == 'del_button':
-        ...
+        await msg_builder.clear_buttons()
     if data == 'media':
         if message.entities:
             url_list = [entity for entity in message.entities if entity.type == 'url']
@@ -158,7 +171,7 @@ async def mailing_edit_step(message: Message, state: FSMContext):
                     await msg_builder.add_media(media_type='video', media=message.video[-1].file_id)
 
     if data == 'del_media':
-        ...
+        await msg_builder.clear_media()
     if data == 'clear':
         await msg_builder.clear()
     name = await msg_builder.get_name()
@@ -174,10 +187,8 @@ async def mailing_edit_step(message: Message, state: FSMContext):
         else:
             schedule += '{i} '
     if name:
-        print(True)
         _ = 'schedule'
     else:
-        print(False)
         _ = 'momental'
 
     await message.answer(text=dialogs.RU_ru['marketing']['mailing'][_].format(

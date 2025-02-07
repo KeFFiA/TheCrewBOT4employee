@@ -554,12 +554,12 @@ async def register_step_1(message: Message, state: FSMContext):
         else:
             _promo = '❌'
 
-        if referrer_id is not None:
+        if referrer_id is not dialogs.RU_ru['empty']:
             referrer_name = await find_referrer_name(referrer_id)
         else:
             referrer_name = dialogs.RU_ru['empty']
 
-        if middlename is not None:
+        if middlename is not dialogs.RU_ru['empty']:
             _name = f'{surname} {name} {middlename}'
         else:
             _name = f'{surname} {name}'
@@ -577,14 +577,6 @@ async def register_step_1(message: Message, state: FSMContext):
                              reply_markup=await create_register_menu())
 
     await state.clear()
-
-
-# @user_router.message(Register.name)
-# async def register_step_name(message: Message, state: FSMContext):
-#     data = await state.get_data()
-#     result = data['names']
-#     await message.answer(text=dialogs.RU_ru['register']['names_found'].format(name=data))
-
 
 
 
