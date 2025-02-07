@@ -631,7 +631,7 @@ async def shift_open(user_id, org_id):
                 status = resp.status
                 if status == 200:
                     db.query(query='UPDATE employee_list SET term_open=%s, org_open=%s WHERE user_id=%s',
-                             values=(term_id_list[0], org_id, user_id))
+                             values=(term_id_list, org_id, user_id))
                     return True
                 else:
                     iiko_cloud_api_logger.error(f'Error opening shift for employee <{emp_id}>: {await resp.json()}')
