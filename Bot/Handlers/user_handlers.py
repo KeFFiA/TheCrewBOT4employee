@@ -1,5 +1,4 @@
 import re
-from token import AWAIT
 
 from aiogram import Router, F, Bot
 from aiogram.filters import Command, CommandStart, CommandObject
@@ -16,6 +15,9 @@ from Database.database import db
 from Scripts.scripts import generate_qr_card, find_referrer_name, normalize_phone_number, find_similar_names
 
 user_router = Router()
+privacy_list = ['privacy_yes', 'privacy_no']
+sex_list = [dialogs.RU_ru['navigation']['not_match'], dialogs.RU_ru['navigation']['male'],
+            dialogs.RU_ru['navigation']['female']]
 
 
 # COMMANDS/MESSAGES
@@ -56,8 +58,6 @@ async def start_cmd(message: Message, state: FSMContext, command: CommandObject)
                                    FROM customers WHERE user_id=%s""", values=(message.from_user.id,), fetch='fetchone')
 
         if result:
-            sex_list = [dialogs.RU_ru['navigation']['not_match'], dialogs.RU_ru['navigation']['male'],
-                        dialogs.RU_ru['navigation']['female']]
             name, middlename, surname, birthday, sex, phone, email = (
                 value if value is not None else dialogs.RU_ru['empty'] for value in result
             )
@@ -87,14 +87,15 @@ async def menu_cmd(message: Message, state: FSMContext):
 
 @user_router.message(Command('card'))
 async def card_cmd(message: Message, state: FSMContext):
-    card_number = db.query(query="""SELECT card_number FROM customers WHERE user_id=%s""", values=(message.from_user.id,),
-                           fetch='fetchone')[0]
+    card_number = \
+    db.query(query="""SELECT card_number FROM customers WHERE user_id=%s""", values=(message.from_user.id,),
+             fetch='fetchone')[0]
     qr_image = await generate_qr_card(card_number=card_number)
     input_file = BufferedInputFile(qr_image, 'qr.png')
     await message.answer_photo(caption=dialogs.RU_ru['user']['card'],
-                                    reply_markup=await create_user_menu_card(),
-                                    photo=input_file,
-                                    protect_content=True)
+                               reply_markup=await create_user_menu_card(),
+                               photo=input_file,
+                               protect_content=True)
     await state.clear()
 
 
@@ -111,8 +112,6 @@ async def register_contact(message: Message, bot: Bot):
                       values=(message.from_user.id,),
                       fetch='fetchone')
     if result:
-        sex_list = [dialogs.RU_ru['navigation']['not_match'], dialogs.RU_ru['navigation']['male'],
-                    dialogs.RU_ru['navigation']['female']]
 
         name, middlename, surname, birthday, sex, phone, email, referrer_id = (
             value if value is not None else dialogs.RU_ru['empty'] for value in result
@@ -174,8 +173,7 @@ async def iiko_menu(call: CallbackQuery):
                       values=(call.from_user.id,),
                       fetch='fetchone')
     if result:
-        sex_list = [dialogs.RU_ru['navigation']['not_match'], dialogs.RU_ru['navigation']['male'],
-                    dialogs.RU_ru['navigation']['female']]
+
         name, middlename, surname, birthday, sex, phone, email, referrer_id, card_number, category = (
             value if value is not None else dialogs.RU_ru['empty'] for value in result
         )
@@ -243,7 +241,6 @@ async def register_step(call: CallbackQuery, state: FSMContext, bot: Bot):
     if data == 'sex':
         await call.message.edit_text(text=dialogs.RU_ru['register']['sex'], reply_markup=await choose_sex_menu())
     if data == 'male' or data == 'female' or data == 'none':
-        sex_list = ['none', 'male', 'female']
         db.query(query='UPDATE customers SET sex=%s WHERE user_id=%s',
                  values=(f'{sex_list.index(data)}', call.from_user.id))
         result = db.query(query="""SELECT name, middlename, surname, birthday, sex, phone, email, referrer_id
@@ -251,8 +248,6 @@ async def register_step(call: CallbackQuery, state: FSMContext, bot: Bot):
                           values=(call.from_user.id,),
                           fetch='fetchone')
         if result:
-            sex_list = [dialogs.RU_ru['navigation']['not_match'], dialogs.RU_ru['navigation']['male'],
-                        dialogs.RU_ru['navigation']['female']]
             name, middlename, surname, birthday, sex, phone, email, referrer_id = (
                 value if value is not None else dialogs.RU_ru['empty'] for value in result
             )
@@ -290,11 +285,11 @@ async def register_step(call: CallbackQuery, state: FSMContext, bot: Bot):
                                                FROM customers WHERE user_id=%s""", values=(call.from_user.id,),
                           fetch='fetchone')
         promo = \
-        db.query("SELECT receive_promo FROM customers WHERE user_id=%s", values=(call.from_user.id,), fetch='fetchone')[
-            0]
+            db.query("SELECT receive_promo FROM customers WHERE user_id=%s", values=(call.from_user.id,),
+                     fetch='fetchone')[
+                0]
         if result:
-            sex_list = [dialogs.RU_ru['navigation']['not_match'], dialogs.RU_ru['navigation']['male'],
-                        dialogs.RU_ru['navigation']['female']]
+
             name, middlename, surname, birthday, sex, phone, email, referrer_id = (
                 value if value is not None else dialogs.RU_ru['empty'] for value in result
             )
@@ -339,8 +334,6 @@ async def register_step(call: CallbackQuery, state: FSMContext, bot: Bot):
                               values=(call.from_user.id,),
                               fetch='fetchone')
             if result:
-                sex_list = [dialogs.RU_ru['navigation']['not_match'], dialogs.RU_ru['navigation']['male'],
-                            dialogs.RU_ru['navigation']['female']]
 
                 name, middlename, surname, birthday, sex, phone, email, referrer_id = (
                     value if value is not None else dialogs.RU_ru['empty'] for value in result
@@ -370,16 +363,16 @@ async def register_step(call: CallbackQuery, state: FSMContext, bot: Bot):
 
                 await call.message.edit_text(
                     text=dialogs.RU_ru['register']['fields_error'].format(us_name=call.from_user.first_name,
-                                                                   name=_name, birthday=birthday,
-                                                                   sex=_sex,
-                                                                   referrer=referrer_name,
-                                                                   phone=phone, email=email, promo=_promo),
+                                                                          name=_name, birthday=birthday,
+                                                                          sex=_sex,
+                                                                          referrer=referrer_name,
+                                                                          phone=phone, email=email, promo=_promo),
                     reply_markup=await create_register_menu())
         else:
-            await call.message.edit_text(text=dialogs.RU_ru['register']['consent'], reply_markup=await privacy_keyboard())
+            await call.message.edit_text(text=dialogs.RU_ru['register']['consent'],
+                                         reply_markup=await privacy_keyboard())
 
     if data == 'privacy_yes' or data == 'privacy_no':
-        privacy_list = ['privacy_yes', 'privacy_no']
         db.query(query="UPDATE customers SET consent_status=%s, comment=%s WHERE user_id=%s",
                  values=(f'{privacy_list.index(data) + 1}',
                          'Registered from TelegramBOT', call.from_user.id))
@@ -395,8 +388,9 @@ async def register_step(call: CallbackQuery, state: FSMContext, bot: Bot):
 @user_router.callback_query(F.data.startswith('settings_'))
 async def settings_menus(call: CallbackQuery):
     data = call.data.removeprefix('settings_')
-    tg, sms, email = db.query(query="SELECT tg_promo, sms_promo, email_promo FROM users WHERE user_id=%s", values=(call.from_user.id,),
-                     fetch='fetchone')
+    tg, sms, email = db.query(query="SELECT tg_promo, sms_promo, email_promo FROM users WHERE user_id=%s",
+                              values=(call.from_user.id,),
+                              fetch='fetchone')
 
     if data == 'menu':
         await call.message.edit_text(text=dialogs.RU_ru['settings'].format(tg_promo=dialogs.RU_ru['marks'][tg],
@@ -477,7 +471,8 @@ async def register_step_1(message: Message, state: FSMContext):
             db.query(query="UPDATE customers SET email = %s WHERE user_id=%s", values=(_email, message.from_user.id))
         if phone:
             _phone = await normalize_phone_number(phone[0].extract_from(message.text))
-            db.query(query="UPDATE customers SET phone = %s WHERE user_id=%s", values=(f'+{_phone}', message.from_user.id))
+            db.query(query="UPDATE customers SET phone = %s WHERE user_id=%s",
+                     values=(f'+{_phone}', message.from_user.id))
     elif date_pattern.match(text):
         birthday = text
         db.query(query="UPDATE customers SET birthday = %s WHERE user_id=%s", values=(birthday, message.from_user.id))
@@ -487,7 +482,11 @@ async def register_step_1(message: Message, state: FSMContext):
     elif not bool(message.entities) and not bool(date_pattern.match(text)) and not bool(phone_pattern.match(text)):
         result = await find_similar_names(text)
         result_test = result[0].split()
-        user_id_test = db.query(query='SELECT user_id FROM customers WHERE surname = %s AND name = %s', values=(result_test[0], result_test[1]), fetch='one')[0]
+        try:
+            user_id_test = db.query(query='SELECT user_id FROM customers WHERE surname = %s AND name = %s',
+                                    values=(result_test[0], result_test[1]), fetch='one')[0]
+        except:
+            user_id_test = False
         if not user_id_test:
             if result:
                 full_name = result[0].split(" ", maxsplit=3)
@@ -540,9 +539,6 @@ async def register_step_1(message: Message, state: FSMContext):
                                                    FROM customers WHERE user_id=%s""", values=(message.from_user.id,),
                       fetch='fetchone')
     if result:
-        sex_list = [dialogs.RU_ru['navigation']['not_match'], dialogs.RU_ru['navigation']['male'],
-                    dialogs.RU_ru['navigation']['female']]
-
         name, middlename, surname, birthday, sex, phone, email, referrer_id = (
             value if value is not None else dialogs.RU_ru['empty'] for value in result
         )
@@ -577,8 +573,3 @@ async def register_step_1(message: Message, state: FSMContext):
                              reply_markup=await create_register_menu())
 
     await state.clear()
-
-
-
-
-
