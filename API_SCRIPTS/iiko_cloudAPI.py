@@ -674,11 +674,12 @@ async def update_stop_list():
                             for item in items_2:
                                 item_id = item.get('productId')
                                 date_add = item.get('dateAdd')
+                                balance = item.get('balance')
                                 db.query(query="""BEGIN;
-                                INSERT INTO stop_list (org_id, item_id, date_add) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;
+                                INSERT INTO stop_list (org_id, item_id, date_add, balance) VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING;
                                 UPDATE stop_list SET name = menu.name FROM menu WHERE stop_list.item_id = menu.item_id;
                                 DELETE FROM stop_list WHERE stop_list.name IS NULL;""",
-                                         values=(org_id, item_id, date_add), log_level=30, debug=True)
+                                         values=(org_id, item_id, date_add, balance), log_level=30, debug=True)
                     for_check_1 = await check_stop_list()
                     if for_check_1 != for_check_2:
                         diff = await stop_list_differences(for_check_1, for_check_2)

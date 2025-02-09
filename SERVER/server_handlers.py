@@ -14,7 +14,8 @@ async def stop_list_server():
                     continue
                 item = items.get('items')[0]
                 name = item.get('name')
-                new_items_text += f'<b>{k}</b> - {name}\n'
+                balance = item.get('balance')
+                new_items_text += f'<b>{k}</b> - {name} - {balance}\n'
         except:
             return 'Break', 'Break'
         already_stop_list = await check_stop_list()
@@ -23,7 +24,8 @@ async def stop_list_server():
             already_stop_text += f'<b>{k}</b>\n\n'
             for item in items.get('items'):
                 name = item.get('name')
-                already_stop_text += f'<b>{name}</b>\n'
+                balance = item.get('balance')
+                already_stop_text += f'<b>{name} - {balance}</b>\n'
             already_stop_text += '\n'
         if len(new_items_text) > 0:
             return new_items_text, already_stop_text

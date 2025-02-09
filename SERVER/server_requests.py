@@ -116,7 +116,7 @@ async def iiko_webhook(request) -> web.Response:
                         try:
                             await bot.send_message(chat_id=user_id[0],
                                                    text=dialogs.RU_ru['server']['stop_list_update'].format(new_items_text, already_stop_text))
-                            server_logger.info(f'Message sent to {user_id}')
+                            server_logger.info(f'Message sent to {user_id[0]}')
                         except Exception as _ex:
                             server_logger.error(f"Failed to send message to {user_id}: {_ex}")
                             return web.Response(status=500, reason='Failed to send message to user',
