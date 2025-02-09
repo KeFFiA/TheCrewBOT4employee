@@ -16,6 +16,8 @@ async def check_stop_list():
     result = {}
 
     for org_id, name, item_id, date_add, balance in data:
+        if balance < 0:
+            balance = 0
         org_name = db.query('SELECT name FROM organizations WHERE org_id=%s', values=(org_id,), fetch='fetchone')[0]
         if org_name not in result:
             result[org_name] = {
