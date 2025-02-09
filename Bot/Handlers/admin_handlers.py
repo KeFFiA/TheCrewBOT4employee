@@ -41,7 +41,8 @@ async def stop_list_query(call: CallbackQuery):
         stop_text += f'<b>{k}</b>\n\n'
         for item in items.get('items'):
             name = item.get('name')
-            stop_text += f'<b>{name}</b>\n'
+            balance = item.get('balance')
+            stop_text += f'<b>{name}</b> - {balance}\n'
         stop_text += '\n'
 
     await call.message.edit_text(text=dialogs.RU_ru['stop_list'].format(stop_text),
