@@ -241,8 +241,9 @@ async def register_step(call: CallbackQuery, state: FSMContext, bot: Bot):
     if data == 'sex':
         await call.message.edit_text(text=dialogs.RU_ru['register']['sex'], reply_markup=await choose_sex_menu())
     if data == 'male' or data == 'female' or data == 'none':
+        sex_list_indexes = ['none', 'male', 'female']
         db.query(query='UPDATE customers SET sex=%s WHERE user_id=%s',
-                 values=(f'{sex_list.index(data)}', call.from_user.id))
+                 values=(f'{sex_list_indexes.index(data)}', call.from_user.id))
         result = db.query(query="""SELECT name, middlename, surname, birthday, sex, phone, email, referrer_id
                                                        FROM customers WHERE user_id=%s""",
                           values=(call.from_user.id,),

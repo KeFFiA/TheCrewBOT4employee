@@ -107,6 +107,11 @@ CREATE TABLE IF NOT EXISTS users (
     user_name TEXT CHECK (char_length(user_name) <= 500),
     username TEXT CHECK (char_length(username) <= 500),
     user_surname TEXT CHECK (char_length(user_surname) <= 500),
+    is_registered BOOLEAN DEFAULT FALSE NOT NULL,
+    is_employee BOOLEAN DEFAULT FALSE NOT NULL,
+    tg_promo BOOLEAN DEFAULT FALSE NOT NULL,
+    sms_promo BOOLEAN DEFAULT FALSE NOT NULL,
+    email_promo BOOLEAN DEFAULT FALSE NOT NULL,
     id SERIAL PRIMARY KEY
 );
 """
@@ -281,18 +286,36 @@ create_defaults_texts_table = """
 """
 
 
-# db.query(query=create_defaults_texts_table)
-# db.query(query=create_users_table)
-# db.query(query=create_white_list_table)
-# db.query(query=create_tokens_table)
-# db.query(query=create_employee_table)
-# db.query(query=create_organizations_table)
-# db.query(query=create_employee_couriers_table)
-# db.query(query=create_stop_list_table)
-# db.query(query=create_menu_table)
-# db.query(query=create_iiko_login_table)
-# db.query(query=create_employee_server_table)
-# db.query(query=create_loyalty_program_table)
-# db.query(query=create_loyalty_marketing_campaigns_table)
-# db.query(query=create_customer_categories_table)
-# db.query(query=create_customers_table)
+db.query(query=create_defaults_texts_table)
+db.query(query=create_users_table)
+db.query(query=create_white_list_table)
+db.query(query=create_tokens_table)
+db.query(query=create_employee_table)
+db.query(query=create_organizations_table)
+db.query(query=create_employee_couriers_table)
+db.query(query=create_stop_list_table)
+db.query(query=create_menu_table)
+db.query(query=create_iiko_login_table)
+db.query(query=create_employee_server_table)
+db.query(query=create_loyalty_program_table)
+db.query(query=create_loyalty_marketing_campaigns_table)
+db.query(query=create_customer_categories_table)
+db.query(query=create_customers_table)
+
+
+if __name__ == "__main__":
+    db.query(query=create_defaults_texts_table)
+    db.query(query=create_users_table)
+    db.query(query=create_white_list_table)
+    db.query(query=create_tokens_table)
+    db.query(query=create_employee_table)
+    db.query(query=create_organizations_table)
+    db.query(query=create_employee_couriers_table)
+    db.query(query=create_stop_list_table)
+    db.query(query=create_menu_table)
+    db.query(query=create_iiko_login_table)
+    db.query(query=create_employee_server_table)
+    db.query(query=create_loyalty_program_table)
+    db.query(query=create_loyalty_marketing_campaigns_table)
+    db.query(query=create_customer_categories_table)
+    db.query(query=create_customers_table)

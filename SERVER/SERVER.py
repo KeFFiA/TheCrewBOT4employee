@@ -7,8 +7,8 @@ from Bot.Utils.logging_settings import servers_logger
 from SERVER.server_requests import iiko_webhook, index, privacy, iiko_card_webhook
 from path import CERT_PATH, KEY_PATH
 
-ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-ssl_context.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)
+# ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+# ssl_context.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)
 
 app = web.Application()
 
@@ -22,8 +22,8 @@ def start_server():
     except Exception as _ex:
         servers_logger.exception(f"Adding router error: {_ex}")
     try:
-        web.run_app(app, host=config.host_web, port=config.port_web, ssl_context=ssl_context)
-        # web.run_app(app, host=config.host_web, port=config.port_web)
+        # web.run_app(app, host=config.host_web, port=config.port_web, ssl_context=ssl_context)
+        web.run_app(app, host=config.host_web, port=config.port_web)
         servers_logger.info("Server started successfully")
     except Exception as _ex:
         servers_logger.exception(f"Starting server error: {_ex}")
