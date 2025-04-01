@@ -112,6 +112,8 @@ CREATE TABLE IF NOT EXISTS users (
     tg_promo BOOLEAN DEFAULT FALSE NOT NULL,
     sms_promo BOOLEAN DEFAULT FALSE NOT NULL,
     email_promo BOOLEAN DEFAULT FALSE NOT NULL,
+    is_admin BOOLEAN DEFAULT FALSE NOT NULL,
+    is_smm BOOLEAN DEFAULT FALSE NOT NULL,
     id SERIAL PRIMARY KEY
 );
 """
@@ -183,7 +185,8 @@ create_stop_list_table = """
         org_id TEXT DEFAULT NULL,
         name TEXT DEFAULT NULL,
         item_id TEXT UNIQUE DEFAULT NULL,
-        date_add Text DEFAULT NULL
+        date_add Text DEFAULT NULL,
+        balance INTEGER DEFAULT NULL
         )
     """
 

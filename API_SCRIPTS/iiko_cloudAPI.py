@@ -425,7 +425,7 @@ async def create_update_customer(user_id):
                             return False
             return True
     except Exception as _ex:
-        iiko_cloud_api_logger.error(f'Create customer[{user_id}] error: {_ex}')
+        iiko_cloud_api_logger.error(f'Create customer[{user_id}] error: {_ex}', exc_info=True)
         return False
 
 
