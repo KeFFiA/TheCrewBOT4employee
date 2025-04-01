@@ -1,6 +1,6 @@
 aiogram==3.13.1
 psycopg2==2.9.9
-aiohttp==3.10.5
+aiohttp==3.10.11
 
 geopy==2.4.1
 prettytable==3.11.0
@@ -15,3 +15,5 @@ Pillow>=8.0.0
 
 
 fuzzywuzzy==0.18.0
+requests==2.32.3
+transliterate==1.10.2

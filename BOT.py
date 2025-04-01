@@ -1,10 +1,5 @@
-import importlib
-import os
-
 from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
-from watchdog.events import FileSystemEventHandler
-from watchdog.observers import Observer
 
 import config
 from API_SCRIPTS.iikoAPI import bot, dp
@@ -18,7 +13,6 @@ from Bot.Utils.middlewares import CheckInAdminListMiddleware, CheckInEmployeeLis
 from Bot.Utils.scheduler import load_jobs, scheduler
 from Bot.dialogs import commands
 from SERVER.SERVER import app, start_server
-from path import root_path
 
 async def on_startup():
     load_jobs()
