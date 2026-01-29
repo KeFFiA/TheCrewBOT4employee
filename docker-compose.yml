@@ -1,6 +1,8 @@
 services:
   bot:
-    image: keffia/thecrew:1.3
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: thecrew_bot
     ports:
       - '443:8080'
