@@ -181,7 +181,7 @@ async def find_similar_names(name, threshold=60):
     if result:
         return result
     else:
-        return []
+        return False
 
 
 async def formatting_text(entities, message):

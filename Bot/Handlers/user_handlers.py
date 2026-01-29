@@ -482,24 +482,35 @@ async def register_step_1(message: Message, state: FSMContext):
         db.query(query="UPDATE customers SET phone = %s WHERE user_id=%s", values=(f'+{_phone}', message.from_user.id))
     elif not bool(message.entities) and not bool(date_pattern.match(text)) and not bool(phone_pattern.match(text)):
         result = await find_similar_names(text)
-        result_test = result[0].split()
-        try:
-            user_id_test = db.query(query='SELECT user_id FROM customers WHERE surname = %s AND name = %s',
-                                    values=(result_test[0], result_test[1]), fetch='one')[0]
-        except:
-            user_id_test = False
-        if not user_id_test:
-            if result:
-                full_name = result[0].split(" ", maxsplit=3)
-                if len(text) == 3:
-                    surname = full_name[0]
-                    name = full_name[1]
-                    middlename = full_name[2] or text[2]
+        if result:
+            result_test = result[0].split()
+            try:
+                user_id_test = db.query(query='SELECT user_id FROM customers WHERE surname = %s AND name = %s',
+                                        values=(result_test[0], result_test[1]), fetch='one')[0]
+            except:
+                user_id_test = False
+            if not user_id_test:
+                if result:
+                    full_name = result[0].split(" ", maxsplit=3)
+                    if len(text) == 3:
+                        surname = full_name[0]
+                        name = full_name[1]
+                        middlename = full_name[2] or text[2]
+                    else:
+                        surname = full_name[0]
+                        name = full_name[1]
+                        middlename = None
                 else:
-                    surname = full_name[0]
-                    name = full_name[1]
-                    middlename = None
-            else:
+                    text = text.split(" ", maxsplit=3)
+                    if len(text) == 3:
+                        surname = text[0]
+                        name = text[1]
+                        middlename = text[2]
+                    else:
+                        surname = text[0]
+                        name = text[1]
+                        middlename = None
+            elif user_id_test != message.from_user.id:
                 text = text.split(" ", maxsplit=3)
                 if len(text) == 3:
                     surname = text[0]
@@ -509,28 +520,18 @@ async def register_step_1(message: Message, state: FSMContext):
                     surname = text[0]
                     name = text[1]
                     middlename = None
-        elif user_id_test != message.from_user.id:
-            text = text.split(" ", maxsplit=3)
-            if len(text) == 3:
-                surname = text[0]
-                name = text[1]
-                middlename = text[2]
             else:
-                surname = text[0]
-                name = text[1]
-                middlename = None
-        else:
-            full_name = result[0].split(" ", maxsplit=3)
-            if len(text) == 3:
-                surname = full_name[0]
-                name = full_name[1]
-                middlename = full_name[2] or text[2]
-            else:
-                surname = full_name[0]
-                name = full_name[1]
-                middlename = None
-        db.query(query="UPDATE customers SET name=%s, surname=%s, middlename=%s WHERE user_id=%s",
-                 values=(name, surname, middlename, message.from_user.id))
+                full_name = result[0].split(" ", maxsplit=3)
+                if len(text) == 3:
+                    surname = full_name[0]
+                    name = full_name[1]
+                    middlename = full_name[2] or text[2]
+                else:
+                    surname = full_name[0]
+                    name = full_name[1]
+                    middlename = None
+            db.query(query="UPDATE customers SET name=%s, surname=%s, middlename=%s WHERE user_id=%s",
+                     values=(name, surname, middlename, message.from_user.id))
     else:
         await message.answer(text=dialogs.RU_ru['register']['not_found_match'].format(text=text))
         await state.set_state(Register.step)
