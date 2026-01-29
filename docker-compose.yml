@@ -1,6 +1,13 @@
 services:
   bot:
     image: keffia/thecrew:1.3
+    container_name: thecrew_bot
     ports:
       - '443:8080'
     restart: unless-stopped
+    networks:
+      - api_net
+
+networks:
+  api_net:
+    external: true
