@@ -15,6 +15,7 @@ from Bot.dialogs import commands
 from SERVER.SERVER import app, start_server
 
 async def on_startup():
+    start_server()
     load_jobs()
     scheduler.start()
     await bot.set_webhook(f'{config.base_url}{config.path_webhook}')
@@ -56,8 +57,6 @@ def main():
     webhook_request_handler.register(app, path=f'{config.path_webhook}')
 
     setup_application(app, dp, bot=bot)
-
-    start_server()
 
 
 if __name__ == "__main__":
