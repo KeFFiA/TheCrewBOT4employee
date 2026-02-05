@@ -1,15 +1,13 @@
-from datetime import datetime
-
-from apscheduler.triggers.cron import CronTrigger
-
-from API_SCRIPTS.iiko_cloudAPI import update_token, update_menu, update_loyalty_programs, update_customer_categories
-from API_SCRIPTS.iikoAPI import update_employees, employees_attendance
-from Bot.Utils.logging_settings import scheduler_logger
+from datetime import datetime, timedelta, timezone
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
+from API_SCRIPTS.iikoAPI import update_employees, employees_attendance
+from API_SCRIPTS.iiko_cloudAPI import update_token, update_menu, update_loyalty_programs, update_customer_categories
+from Bot.Utils.logging_settings import scheduler_logger
 from Database.database import db
-
 
 scheduler = AsyncIOScheduler()
 
@@ -33,7 +31,8 @@ async def update_menu_cloud_job():
 async def update_employees_iiko_job():
     try:
         await update_employees()
-        scheduler_logger.info(f"Job executed: update_employees_iiko at {datetime.now().strftime('%Y-%m-%d | %H:%M:%S')}")
+        scheduler_logger.info(
+            f"Job executed: update_employees_iiko at {datetime.now().strftime('%Y-%m-%d | %H:%M:%S')}")
     except Exception as _ex:
         scheduler_logger.error(f"Error executing job update_employees_iiko: {_ex}")
 
@@ -49,7 +48,8 @@ async def update_loyalty():
 async def update_customers_categories():
     try:
         await update_customer_categories()
-        scheduler_logger.info(f"Job executed: update_customer_categories at {datetime.now().strftime('%Y-%m-%d | %H:%M:%S')}")
+        scheduler_logger.info(
+            f"Job executed: update_customer_categories at {datetime.now().strftime('%Y-%m-%d | %H:%M:%S')}")
     except Exception as _ex:
         scheduler_logger.error(f"Error executing job update_customer_categories: {_ex}")
 
@@ -57,8 +57,9 @@ async def update_customers_categories():
 async def mailing_attendance():
     now = datetime.now()
     try:
-        user_ids = db.query(query="SELECT user_id FROM employee_list WHERE emp_id IS NOT NULL AND receive_shift_time IS TRUE",
-                            fetch='fetchall')
+        user_ids = db.query(
+            query="SELECT user_id FROM employee_list WHERE emp_id IS NOT NULL AND receive_shift_time IS TRUE",
+            fetch='fetchall')
         for user_id in user_ids:
             if now.day == 22:
                 data = 'first_half'
@@ -71,14 +72,39 @@ async def mailing_attendance():
         scheduler_logger.error(f"Error executing job send_attendance_for_users: {_ex}")
 
 
+def next_quarter(dt: datetime) -> datetime:
+    dt = dt.replace(second=0, microsecond=0)
+    minutes = ((dt.minute // 15) + 1) * 15
+    if minutes == 60:
+        return dt.replace(minute=0) + timedelta(hours=1)
+    return dt.replace(minute=minutes)
+
+
+def next_ten_minutes(dt: datetime) -> datetime:
+    dt = dt.replace(second=0, microsecond=0)
+
+    minutes = ((dt.minute // 10) + 1) * 10
+
+    if minutes == 60:
+        return dt.replace(minute=0) + timedelta(hours=1)
+
+    return dt.replace(minute=minutes)
+
+
 def load_jobs():
     try:
-        scheduler.add_job(update_tokens_cloud_job, 'cron', hour='*', minute=0)
-        scheduler.add_job(update_menu_cloud_job, 'cron', hour='*', minute=0)
-        scheduler.add_job(update_employees_iiko_job, 'cron', hour='*', minute=0)
-        scheduler.add_job(mailing_attendance, CronTrigger(day='1,16', hour=12, minute=0))
-        scheduler.add_job(update_loyalty, 'cron', hour='*', minute=0)
-        scheduler.add_job(update_customers_categories, 'cron', hour=0, minute=0)
+        scheduler.add_job(update_tokens_cloud_job, IntervalTrigger(minutes=30),
+                          next_run_time=next_ten_minutes(datetime.now(timezone.utc)))
+        scheduler.add_job(update_menu_cloud_job, IntervalTrigger(minutes=30),
+                          next_run_time=next_ten_minutes(datetime.now(timezone.utc)))
+        scheduler.add_job(update_employees_iiko_job, IntervalTrigger(minutes=30),
+                          next_run_time=next_ten_minutes(datetime.now(timezone.utc)))
+        scheduler.add_job(mailing_attendance, CronTrigger(day='1,16', hour=12, minute=0),
+                          next_run_time=next_ten_minutes(datetime.now(timezone.utc)))
+        scheduler.add_job(update_loyalty, IntervalTrigger(minutes=30),
+                          next_run_time=next_ten_minutes(datetime.now(timezone.utc)))
+        scheduler.add_job(update_customers_categories, IntervalTrigger(minutes=30),
+                          next_run_time=next_ten_minutes(datetime.now(timezone.utc)))
         scheduler_logger.info('Jobs loaded correctly.')
     except Exception as _ex:
         scheduler_logger.error(f'Failed to load jobs\n{_ex}')
