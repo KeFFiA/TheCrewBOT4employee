@@ -28,7 +28,7 @@ async def create_menu_keyboard(user_id):
         empl_kb = InlineKeyboardMarkup(inline_keyboard=[[empl_butn]])
         builder.attach(InlineKeyboardBuilder.from_markup(empl_kb))
 
-    is_admin = db.query(query="SELECT is_admin FROM users WHERE user_id=%s", fetch='fetchone', values=(user_id,))[0]
+    is_admin = db.query(query="SELECT is_admin FROM users WHERE user_id=%s", fetch='fetchone', values=(user_id,))
     if True in is_admin:
         admin_but = InlineKeyboardButton(callback_data='admin', text=dialogs.RU_ru['navigation']['admin_menu'])
         admin_kb = InlineKeyboardMarkup(inline_keyboard=[[admin_but]])
